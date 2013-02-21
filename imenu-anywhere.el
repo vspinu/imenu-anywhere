@@ -1,0 +1,161 @@
+;;; imenu-anywhere.el --- ido imenu tag selection accros all buffers with the same mode 
+;;
+;; Copyright (C) 2011-2013 Vitalie Spinu
+;; Author: Vitalie Spinu  <spinuvit.list[ aaattt ]gmail[ dot ]com>
+;; Version: DEV
+;;
+;; This file is NOT part of GNU Emacs.
+;;
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License
+;; as published by the Free Software Foundation; either version 2
+;; of the License, or (at your option) any later version.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;
+;;; Commentary:
+;;
+;;; Code:
+
+(require 'ido nil t)
+(require 'imenu)
+
+(defvar imenu-anywhere-use-ido t
+  "Use ido even when ido-mode is not enabled.")
+(defvar imenu-anywhere-delimiter "/")
+(defvar imenu-anywhere-cached-candidates nil
+  "An alist of flatten imenu tags from of the form (name . marker)")
+(make-variable-buffer-local 'imenu-anywhere-cached-candidates)
+(defvar imenu-anywhere-cached-tick nil
+  "Value of buffer's tick counter at last imenu-anywere update.")
+(make-variable-buffer-local 'imenu-anywhere-cached-tick)
+
+
+(defun imenu-anywhere--index-alist (&optional modes force-update)
+  "Return an alist of imenu tags from buffers where imenu is meaningful.
+If MODES is nil look only for buffers with the mode equal to the
+mode of the current buffer.  If MODES is t return all the buffers
+irrespective of mode.  Else MODES must be a _list_ of symbols of
+the major modes of interest."
+  (when (null modes)
+    (setq modes (list major-mode)))
+  (delete-if '(lambda (el) (or (null (car el))
+                               (equal (car el) "*Rescan*")))
+             (apply 'append
+                    (mapcar '(lambda (buff)
+                               (when (or (eq modes t) ; all of them
+                                         (member (buffer-local-value 'major-mode buff) modes))
+                                 (with-current-buffer buff
+                                   (sort
+				    (let ((tick (buffer-modified-tick)))
+				      (if (and (eq imenu-anywhere-cached-tick tick)
+					       (not force-update))
+					  ;; return cached
+					  imenu-anywhere-cached-candidates
+					;; else update the indexes if in imenu buffer
+					(setq imenu-anywhere-cached-tick tick)
+					(imenu-anywhere--make-candidates)
+					))
+				    (lambda (a b) (< (length (car a)) (length (car b))))))))
+			    (buffer-list)
+			    ))))
+
+(defun imenu-anywhere--make-candidates ()
+  "Create and chache the candidates in the current buffer.
+Return the newly created alist."
+  (when (or (and imenu-prev-index-position-function ;
+                 imenu-extract-index-name-function)
+            imenu-generic-expression)
+    (setq imenu--index-alist nil)
+    (setq imenu-anywhere-cached-candidates
+          (mapcan
+           'imenu-anywhere--candidates-from-entry
+           (imenu--make-index-alist t)))
+    ))
+
+(defun imenu-anywhere--candidates-from-entry (entry)
+  "Create candidates with ENTRY."
+  (if (imenu--subalist-p entry)
+      (mapcar
+       (lambda (sub)
+         (setcar sub (concat (car sub) imenu-anywhere-delimiter (car entry)))
+           sub)
+         (mapcan 'imenu-anywhere--candidates-from-entry (cdr entry)))
+    (list (cons (car entry) (cdr entry))))
+  )
+
+(defun imenu-anywhere--guess-default (index-alist symbol)
+  "Guess a default choice from the given symbol."
+  ;; todo: make to return a list of matched symbols not only one, and make regexp more flexible
+  (catch 'found
+    (let ((regex (concat "\\`" (regexp-quote symbol)"\\>")))
+      (dolist (item index-alist)
+        (if (string-match regex (car item)) (throw 'found (car item)))))))
+
+(defun imenu-anywhere--goto-function (name position &optional rest)
+  "Function to be used as `imenu-default-goto-function'"
+  (let* ((is-overlay (overlayp position))
+         (buff (or (and is-overlay (overlay-buffer position))
+                   (marker-buffer position)))
+         (position (or (and is-overlay (overlay-start position))
+                       (marker-position position))))
+    (switch-to-buffer buff)
+    (if (or (< position (point-min))
+            (> position (point-max)))
+        ;; widen if outside narrowing
+        (widen))
+    (goto-char position))
+  )
+
+(defun imenu-anywhere--read (index-alist &optional prompt guess)
+  "Read a choice from an Imenu alist via Ido."
+  (let* ((symatpt (thing-at-point 'symbol))
+         (default (and guess symatpt (imenu-anywhere--guess-default index-alist symatpt)))
+         (names (mapcar 'car index-alist))
+         (name (ido-completing-read (or prompt "Imenu: ") names
+                                    nil t nil nil default))
+         )
+    (assoc name index-alist))
+  )
+
+(defun imenu-anywhere (&optional modes)
+  "Switch to a buffer-local tag from Imenu via Ido."
+  (interactive "P")
+  (when (called-interactively-p)
+    (if modes
+        (setq modes t)))
+  (let (reset-ido)
+    (when  (and (not ido-mode)
+                (featurep 'ido )
+                imenu-anywhere-use-ido)
+      ;; ido initialization
+      (ido-init-completion-maps)
+      (add-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
+      (add-hook 'choose-completion-string-functions 'ido-choose-completion-string)
+      (setq reset-ido t)
+      )
+    (unwind-protect
+        (progn
+          ;; set up ido completion list
+          (let ((imenu-default-goto-function 'imenu-anywhere--goto-function)
+                (index-alist (imenu-anywhere--index-alist modes)))
+            (if (null index-alist)
+                (message "No imenu tags")
+              (imenu (imenu-anywhere--read index-alist nil t)))))
+      ;; ido initialization
+      (when reset-ido
+        (remove-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
+        (remove-hook 'choose-completion-string-functions 'ido-choose-completion-string)
+        )
+      )
+    )
+  )
+
+(provide 'imenu-anywhere)
+;;; imenu-anywhere.el ends here
