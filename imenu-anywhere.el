@@ -4,6 +4,7 @@
 ;; Author: Vitalie Spinu  <spinuvit.list[ aaattt ]gmail[ dot ]com>
 ;; Version: DEV
 ;; Keywords: ido, imenu, tags
+;; URL: https://github.com/vitoshka/imenu-anywhere
 ;; 
 ;; This file is NOT part of GNU Emacs.
 ;;
