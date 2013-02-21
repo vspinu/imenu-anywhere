@@ -3,7 +3,8 @@
 ;; Copyright (C) 2011-2013 Vitalie Spinu
 ;; Author: Vitalie Spinu  <spinuvit.list[ aaattt ]gmail[ dot ]com>
 ;; Version: DEV
-;;
+;; Keywords: ido, imenu, tags
+;; 
 ;; This file is NOT part of GNU Emacs.
 ;;
 ;; This program is free software; you can redistribute it and/or
@@ -21,6 +22,15 @@
 ;;
 ;;; Commentary:
 ;;
+;; imenu-anywhere command pops an IDO interface with all the imenu tags across
+;; all buffers with the same mode as the current one. Thus, it compares to etag
+;; selection, but works only for the open buffers. This is often more convenient
+;; as you don't have to explicitly build your etags table.
+;;
+;; To activate, jutt bind imenu-anywhere to a convenient key:
+;;
+;;    (global-set-key (kbd "C-.") 'imenu-anywhere)
+;; 
 ;;; Code:
 
 (require 'ido nil t)
@@ -124,6 +134,7 @@ Return the newly created alist."
     (assoc name index-alist))
   )
 
+;;;###autoload
 (defun imenu-anywhere (&optional modes)
   "Switch to a buffer-local tag from Imenu via Ido."
   (interactive "P")
@@ -158,4 +169,5 @@ Return the newly created alist."
   )
 
 (provide 'imenu-anywhere)
+
 ;;; imenu-anywhere.el ends here
