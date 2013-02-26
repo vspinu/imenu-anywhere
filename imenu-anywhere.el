@@ -2,7 +2,7 @@
 ;;
 ;; Copyright (C) 2011-2013 Vitalie Spinu
 ;; Author: Vitalie Spinu  <spinuvit.list[ aaattt ]gmail[ dot ]com>
-;; Version: DEV
+;; Version: 0.9
 ;; Keywords: ido, imenu, tags
 ;; URL: https://github.com/vitoshka/imenu-anywhere
 ;; 
