@@ -1,11 +1,11 @@
-;;; imenu-anywhere.el --- ido imenu tag selection accros all buffers with the same mode 
+;;; imenu-anywhere.el --- ido imenu tag selection accros all buffers with the same mode
 ;;
 ;; Copyright (C) 2011-2013 Vitalie Spinu
 ;; Author: Vitalie Spinu  <spinuvit.list[ aaattt ]gmail[ dot ]com>
 ;; Version: 0.9
 ;; Keywords: ido, imenu, tags
 ;; URL: https://github.com/vitoshka/imenu-anywhere
-;; 
+;;
 ;; This file is NOT part of GNU Emacs.
 ;;
 ;; This program is free software; you can redistribute it and/or
@@ -31,7 +31,7 @@
 ;; To activate, just bind imenu-anywhere to a convenient key:
 ;;
 ;;    (global-set-key (kbd "C-.") 'imenu-anywhere)
-;; 
+;;
 ;;; Code:
 
 (require 'ido nil t)
@@ -64,27 +64,26 @@ the major modes of interest."
                                          (member (buffer-local-value 'major-mode buff) modes))
                                  (with-current-buffer buff
                                    (sort
-				    (let ((tick (buffer-modified-tick)))
-				      (if (and (eq imenu-anywhere-cached-tick tick)
-					       (not force-update))
-					  ;; return cached
-					  imenu-anywhere-cached-candidates
-					;; else update the indexes if in imenu buffer
-					(setq imenu-anywhere-cached-tick tick)
-					(imenu-anywhere--make-candidates)
-					))
-				    (lambda (a b) (< (length (car a)) (length (car b))))))))
-			    (buffer-list)
-			    ))))
+                                    (let ((tick (buffer-modified-tick)))
+                                      (if (and (eq imenu-anywhere-cached-tick tick)
+                                               (not force-update))
+                                          ;; return cached
+                                          imenu-anywhere-cached-candidates
+                                        ;; else update the indexes if in imenu buffer
+                                        (setq imenu-anywhere-cached-tick tick)
+                                        (imenu-anywhere--make-candidates)
+                                        ))
+                                    (lambda (a b) (< (length (car a)) (length (car b))))))))
+                            (buffer-list)))))
 
 (defun imenu-anywhere--make-candidates ()
   "Create and cache the candidates in the current buffer.
 Return the newly created alist."
   ;; avoid imenu throwing ugly messages
-  ;; (when (or (and imenu-prev-index-position-function 
+  ;; (when (or (and imenu-prev-index-position-function
   ;;                imenu-generic-expression)
   ;;           (not (eq imenu-create-index-function 'imenu-default-create-index-function)))
-  (ignore-errors 
+  (ignore-errors
     (setq imenu--index-alist nil)
     (setq imenu-anywhere-cached-candidates
           (mapcan
@@ -125,8 +124,7 @@ Return the newly created alist."
             (> position (point-max)))
         ;; widen if outside narrowing
         (widen))
-    (goto-char position))
-  )
+    (goto-char position)))
 
 (defun imenu-anywhere--read (index-alist &optional prompt guess)
   "Read a choice from an Imenu alist via Ido."
@@ -136,8 +134,7 @@ Return the newly created alist."
          (name (ido-completing-read (or prompt "Imenu: ") names
                                     nil t nil nil default))
          )
-    (assoc name index-alist))
-  )
+    (assoc name index-alist)))
 
 ;;;###autoload
 (defun imenu-anywhere (&optional modes)
@@ -168,10 +165,7 @@ Return the newly created alist."
       (when reset-ido
         (remove-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
         (remove-hook 'choose-completion-string-functions 'ido-choose-completion-string)
-        )
-      )
-    )
-  )
+        ))))
 
 (provide 'imenu-anywhere)
 
