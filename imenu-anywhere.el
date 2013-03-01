@@ -23,7 +23,7 @@
 ;;
 ;;; Commentary:
 ;;
-;; imenu-anywhere command pops an IDO interface with all the imenu tags across
+;; `imenu-anywhere` command pops an IDO interface with all the imenu tags across
 ;; all buffers with the same mode as the current one. Thus, it compares to etag
 ;; selection, but works only for the open buffers. This is often more convenient
 ;; as you don't have to explicitly build your etags table.
@@ -32,7 +32,10 @@
 ;;
 ;;    (global-set-key (kbd "C-.") 'imenu-anywhere)
 ;;
-;;; Code:
+;; There is also `helm-imenu-anywhere` which is like imenu-anywhere but uses
+;; helm (https://github.com/emacs-helm) interface instead of IDO. Helm library
+;; is not requried by imenu-anywhere.el
+
 
 (require 'ido nil t)
 (require 'imenu)
@@ -166,6 +169,35 @@ Return the newly created alist."
         (remove-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
         (remove-hook 'choose-completion-string-functions 'ido-choose-completion-string)
         ))))
+
+;;;###autoload
+(defun helm-imenu-anywhere ()
+  "`helm' source for `imenu-anywhere'."
+  (interactive)
+  (let ((imenu-auto-rescan t)
+        (imenu-default-goto-function 'imenu-anywhere--goto-function))
+        ;; (imenu-default-goto-function
+        ;;  (if (fboundp 'semantic-imenu-goto-function)
+        ;;      'semantic-imenu-goto-function
+        ;;    'imenu-default-goto-function)))
+    (helm :sources 'helm-source-imenu-anywhere
+          :default (thing-at-point 'symbol)
+          :buffer "*helm imenu-anywhere*")))
+
+(defvar helm-source-imenu-anywhere
+  '((name . "imenu-anywere")
+    (candidates . helm-imenu-anywhere-candidates)
+    (persistent-action . (lambda (elm)
+                           (imenu-anywhere--goto-function "" elm)
+                           (unless (fboundp 'semantic-imenu-tag-overlay)
+                             (helm-match-line-color-current-line))))
+    (persistent-help . "Show this entry")
+    (action . (lambda (elm) (imenu-anywhere--goto-function "" elm))))
+  "See (info \"(emacs)Imenu\") and `imenu-anywhere'")
+
+(defun helm-imenu-anywhere-candidates ()
+  (with-helm-current-buffer
+    (imenu-anywhere--index-alist)))
 
 (provide 'imenu-anywhere)
 

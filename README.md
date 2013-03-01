@@ -8,3 +8,6 @@ To activate, jutt bind imenu-anywhere to a convenient key:
 ```lisp
 (global-set-key (kbd "C-.") 'imenu-anywhere)
 ```
+
+There is also `helm-imenu-anywhere` which is like imenu-anywhere but uses helm
+(https://github.com/emacs-helm) interface instead of IDO.
