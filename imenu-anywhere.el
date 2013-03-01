@@ -80,18 +80,19 @@ the major modes of interest."
 (defun imenu-anywhere--make-candidates ()
   "Create and cache the candidates in the current buffer.
 Return the newly created alist."
-  (when (or (and imenu-prev-index-position-function ;
-                 imenu-extract-index-name-function)
-            imenu-generic-expression)
+  ;; avoid imenu throwing ugly messages
+  ;; (when (or (and imenu-prev-index-position-function 
+  ;;                imenu-generic-expression)
+  ;;           (not (eq imenu-create-index-function 'imenu-default-create-index-function)))
+  (ignore-errors 
     (setq imenu--index-alist nil)
     (setq imenu-anywhere-cached-candidates
           (mapcan
            'imenu-anywhere--candidates-from-entry
-           (imenu--make-index-alist t)))
-    ))
+           (imenu--make-index-alist t)))))
 
 (defun imenu-anywhere--candidates-from-entry (entry)
-  "Create candidates with ENTRY."
+  "Create candidates from imenu ENTRY."
   (if (imenu--subalist-p entry)
       (mapcar
        (lambda (sub)
