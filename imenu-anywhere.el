@@ -96,11 +96,14 @@ Return the newly created alist."
   (if (imenu--subalist-p entry)
       (mapcar
        (lambda (sub)
-         (setcar sub (concat (car sub) imenu-anywhere-delimiter (car entry)))
-           sub)
-         (mapcan 'imenu-anywhere--candidates-from-entry (cdr entry)))
-    (list (cons (car entry) (cdr entry))))
-  )
+         (setcar sub (concat (car sub)
+                             imenu-anywhere-delimiter (car entry)))
+         sub)
+       (mapcan 'imenu-anywhere--candidates-from-entry (cdr entry)))
+    (let ((pos (cdr entry)))
+      (unless (markerp pos)
+        (setq pos (copy-marker pos))) ;; assumes it is an integer, throw error if not?
+      (list (cons (car entry) pos)))))
 
 (defun imenu-anywhere--guess-default (index-alist symbol)
   "Guess a default choice from the given symbol."
