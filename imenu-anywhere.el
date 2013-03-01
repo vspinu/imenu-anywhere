@@ -28,7 +28,7 @@
 ;; selection, but works only for the open buffers. This is often more convenient
 ;; as you don't have to explicitly build your etags table.
 ;;
-;; To activate, jutt bind imenu-anywhere to a convenient key:
+;; To activate, just bind imenu-anywhere to a convenient key:
 ;;
 ;;    (global-set-key (kbd "C-.") 'imenu-anywhere)
 ;; 
@@ -78,7 +78,7 @@ the major modes of interest."
 			    ))))
 
 (defun imenu-anywhere--make-candidates ()
-  "Create and chache the candidates in the current buffer.
+  "Create and cache the candidates in the current buffer.
 Return the newly created alist."
   (when (or (and imenu-prev-index-position-function ;
                  imenu-extract-index-name-function)
