@@ -218,7 +218,8 @@ pyramidal view allows distinguishing different buffers."
     (let ((imenu-anywhere--preprocess-entry 'imenu-anywhere--preprocess-entry-helm))
       (imenu-anywhere--index-alist))))
 
-(add-to-list 'helm-sources-using-default-as-input 'helm-source-imenu-anywhere)
+(eval-after-load "helm"
+  '(add-to-list 'helm-sources-using-default-as-input 'helm-source-imenu-anywhere))
 
 (provide 'imenu-anywhere)
 
