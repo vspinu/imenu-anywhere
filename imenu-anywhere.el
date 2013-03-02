@@ -189,7 +189,9 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
 
 ;;;###autoload
 (defun helm-imenu-anywhere ()
-  "`helm' source for `imenu-anywhere'."
+  "`helm' source for `imenu-anywhere'.
+Sorting is in increasing order of length of imenu symbols. The
+pyramidal view allows distinguishing different buffers."
   (interactive)
   (let ((imenu-default-goto-function 'imenu-anywhere--goto-function))
         ;; (imenu-default-goto-function
