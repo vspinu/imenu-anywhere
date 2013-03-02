@@ -42,7 +42,9 @@
 
 (defvar imenu-anywhere-use-ido t
   "Use ido even when ido-mode is not enabled.")
-(defvar imenu-anywhere-delimiter "/")
+(defvar imenu-anywhere-delimiter-ido "/")
+(defvar imenu-anywhere-delimiter-helm " / ")
+
 (defvar imenu-anywhere-cached-candidates nil
   "An alist of flatten imenu tags from of the form (name . marker)")
 (make-variable-buffer-local 'imenu-anywhere-cached-candidates)
@@ -83,29 +85,45 @@ the major modes of interest."
   "Create and cache the candidates in the current buffer.
 Return the newly created alist."
   ;; avoid imenu throwing ugly messages
-  ;; (when (or (and imenu-prev-index-position-function
-  ;;                imenu-generic-expression)
-  ;;           (not (eq imenu-create-index-function 'imenu-default-create-index-function)))
-  (ignore-errors
+  (when (or (and imenu-prev-index-position-function
+                 imenu-generic-expression)
+            (not (eq imenu-create-index-function 'imenu-default-create-index-function)))
+  ;; (ignore-errors
     (setq imenu--index-alist nil)
     (setq imenu-anywhere-cached-candidates
           (mapcan
            'imenu-anywhere--candidates-from-entry
            (imenu--make-index-alist t)))))
 
+(defvar imenu-anywhere--preprocess-entry 'imenu-anywhere--preprocess-entry-ido
+  "Holds a function to process each entry.
+See the code for `imenu-anywhere--preprocess-entry-ido' and
+`imenu-anywhere--preprocess-entry-helm'")
+
+(defun imenu-anywhere--preprocess-entry-ido (entry prefix)
+  (setcar entry (concat (replace-regexp-in-string "\\c-*$" "" (car entry))
+                        imenu-anywhere-delimiter-ido
+                        prefix))
+  entry)
+
+(defun imenu-anywhere--preprocess-entry-helm (entry prefix)
+  (setcar entry (concat prefix
+                        imenu-anywhere-delimiter-helm
+                        (car entry)))
+  entry)
+
+
 (defun imenu-anywhere--candidates-from-entry (entry)
   "Create candidates from imenu ENTRY."
   (if (imenu--subalist-p entry)
-      (mapcar
-       (lambda (sub)
-         (setcar sub (concat (car sub)
-                             imenu-anywhere-delimiter (car entry)))
-         sub)
-       (mapcan 'imenu-anywhere--candidates-from-entry (cdr entry)))
+      (mapcar (lambda (sub-entry)
+                (funcall imenu-anywhere--preprocess-entry sub-entry (car entry)))
+              (mapcan 'imenu-anywhere--candidates-from-entry (cdr entry)))
     (let ((pos (cdr entry)))
       (unless (markerp pos)
         (setq pos (copy-marker pos))) ;; assumes it is an integer, throw error if not?
       (list (cons (car entry) pos)))))
+
 
 (defun imenu-anywhere--guess-default (index-alist symbol)
   "Guess a default choice from the given symbol."
@@ -135,8 +153,7 @@ Return the newly created alist."
          (default (and guess symatpt (imenu-anywhere--guess-default index-alist symatpt)))
          (names (mapcar 'car index-alist))
          (name (ido-completing-read (or prompt "Imenu: ") names
-                                    nil t nil nil default))
-         )
+                                    nil t nil nil default)))
     (assoc name index-alist)))
 
 ;;;###autoload
@@ -174,8 +191,7 @@ Return the newly created alist."
 (defun helm-imenu-anywhere ()
   "`helm' source for `imenu-anywhere'."
   (interactive)
-  (let ((imenu-auto-rescan t)
-        (imenu-default-goto-function 'imenu-anywhere--goto-function))
+  (let ((imenu-default-goto-function 'imenu-anywhere--goto-function))
         ;; (imenu-default-goto-function
         ;;  (if (fboundp 'semantic-imenu-goto-function)
         ;;      'semantic-imenu-goto-function
@@ -197,7 +213,10 @@ Return the newly created alist."
 
 (defun helm-imenu-anywhere-candidates ()
   (with-helm-current-buffer
-    (imenu-anywhere--index-alist)))
+    (let ((imenu-anywhere--preprocess-entry 'imenu-anywhere--preprocess-entry-helm))
+      (imenu-anywhere--index-alist))))
+
+(add-to-list 'helm-sources-using-default-as-input 'helm-source-imenu-anywhere)
 
 (provide 'imenu-anywhere)
 
