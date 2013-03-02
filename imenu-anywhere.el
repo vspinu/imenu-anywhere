@@ -190,21 +190,6 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
 ;;;###autoload
 (defalias 'ido-imenu-anywhere 'imenu-anywhere)
 
-;;;###autoload
-(defun helm-imenu-anywhere ()
-  "`helm' source for `imenu-anywhere'.
-Sorting is in increasing order of length of imenu symbols. The
-pyramidal view allows distinguishing different buffers."
-  (interactive)
-  (let ((imenu-default-goto-function 'imenu-anywhere--goto-function))
-        ;; (imenu-default-goto-function
-        ;;  (if (fboundp 'semantic-imenu-goto-function)
-        ;;      'semantic-imenu-goto-function
-        ;;    'imenu-default-goto-function)))
-    (helm :sources 'helm-source-imenu-anywhere
-          :default (thing-at-point 'symbol)
-          :buffer "*helm imenu-anywhere*")))
-
 (defvar helm-source-imenu-anywhere
   '((name . "imenu-anywere")
     (candidates . helm-imenu-anywhere-candidates)
@@ -220,6 +205,21 @@ pyramidal view allows distinguishing different buffers."
   (with-helm-current-buffer
     (let ((imenu-anywhere--preprocess-entry 'imenu-anywhere--preprocess-entry-helm))
       (imenu-anywhere--index-alist))))
+
+;;;###autoload
+(defun helm-imenu-anywhere ()
+  "`helm' source for `imenu-anywhere'.
+Sorting is in increasing order of length of imenu symbols. The
+pyramidal view allows distinguishing different buffers."
+  (interactive)
+  (let ((imenu-default-goto-function 'imenu-anywhere--goto-function))
+        ;; (imenu-default-goto-function
+        ;;  (if (fboundp 'semantic-imenu-goto-function)
+        ;;      'semantic-imenu-goto-function
+        ;;    'imenu-default-goto-function)))
+    (helm :sources 'helm-source-imenu-anywhere
+          :default (thing-at-point 'symbol)
+          :buffer "*helm imenu-anywhere*")))
 
 (eval-after-load "helm"
   '(add-to-list 'helm-sources-using-default-as-input 'helm-source-imenu-anywhere))
