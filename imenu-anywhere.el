@@ -1,8 +1,8 @@
-;;; imenu-anywhere.el --- ido imenu tag selection accros all buffers with the same mode
+;;; imenu-anywhere.el --- ido/helm imenu tag selection across all buffers with the same mode
 ;;
 ;; Copyright (C) 2011-2013 Vitalie Spinu
 ;; Author: Vitalie Spinu  <spinuvit.list[ aaattt ]gmail[ dot ]com>
-;; Version: 0.9
+;; Version: DEV
 ;; Keywords: ido, imenu, tags
 ;; URL: https://github.com/vitoshka/imenu-anywhere
 ;;
@@ -24,9 +24,9 @@
 ;;; Commentary:
 ;;
 ;; `imenu-anywhere` command pops an IDO interface with all the imenu tags across
-;; all buffers with the same mode as the current one. Thus, it compares to etag
-;; selection, but works only for the open buffers. This is often more convenient
-;; as you don't have to explicitly build your etags table.
+;; all buffers with the same mode as the current one. In a sense it is similar
+;; to etag selection, but works only for the open buffers. This is often more
+;; convenient as you don't have to explicitly build the etags table.
 ;;
 ;; To activate, just bind imenu-anywhere to a convenient key:
 ;;
@@ -34,7 +34,7 @@
 ;;
 ;; There is also `helm-imenu-anywhere` which is like imenu-anywhere but uses
 ;; helm (https://github.com/emacs-helm) interface instead of IDO. Helm library
-;; is not requried by imenu-anywhere.el
+;; is not loaded by imenu-anywhere.el and you have to install helm separately.
 
 
 (require 'ido nil t)
