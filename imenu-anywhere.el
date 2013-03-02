@@ -53,7 +53,7 @@
 (make-variable-buffer-local 'imenu-anywhere-cached-tick)
 
 
-(defun imenu-anywhere--index-alist (&optional modes force-update)
+(defun imenu-anywhere-candidates (&optional modes force-update)
   "Return an alist of imenu tags from buffers where imenu is meaningful.
 If MODES is nil look only for buffers with the mode equal to the
 mode of the current buffer.  If MODES is t return all the buffers
@@ -61,39 +61,35 @@ irrespective of mode.  Else MODES must be a _list_ of symbols of
 the major modes of interest."
   (when (null modes)
     (setq modes (list major-mode)))
-  (delete-if '(lambda (el) (or (null (car el))
-                               (equal (car el) "*Rescan*")))
-             (apply 'append
-                    (mapcar '(lambda (buff)
-                               (when (or (eq modes t) ; all of them
-                                         (member (buffer-local-value 'major-mode buff) modes))
-                                 (with-current-buffer buff
-                                   (sort
-                                    (let ((tick (buffer-modified-tick)))
-                                      (if (and (eq imenu-anywhere-cached-tick tick)
-                                               (not force-update))
-                                          ;; return cached
-                                          imenu-anywhere-cached-candidates
-                                        ;; else update the indexes if in imenu buffer
-                                        (setq imenu-anywhere-cached-tick tick)
-                                        (imenu-anywhere--make-candidates)
-                                        ))
-                                    (lambda (a b) (< (length (car a)) (length (car b))))))))
-                            (buffer-list)))))
+  (apply 'append
+         (mapcar '(lambda (buff)
+                    (when (or (eq modes t) ; all of them
+                              (member (buffer-local-value 'major-mode buff) modes))
+                      (with-current-buffer buff
+                        (let ((tick (buffer-modified-tick buff)))
+                          (if (and (eq imenu-anywhere-cached-tick tick)
+                                   (not force-update))
+                              ;; return cached
+                              imenu-anywhere-cached-candidates
+                            ;; else update the indexes if in imenu buffer
+                            (setq imenu-anywhere-cached-tick tick)
+                            (setq imenu-anywhere-cached-candidates
+                                  (imenu-anywhere-buffer-candidates)))))))
+                 (buffer-list))))
 
-(defun imenu-anywhere--make-candidates ()
-  "Create and cache the candidates in the current buffer.
-Return the newly created alist."
+(defun imenu-anywhere-buffer-candidates ()
+  "Return an alist of candidates in the current buffer."
   ;; avoid imenu throwing ugly messages
   (when (or (and imenu-prev-index-position-function
                  imenu-generic-expression)
             (not (eq imenu-create-index-function 'imenu-default-create-index-function)))
-  ;; (ignore-errors
+    ;; (ignore-errors
     (setq imenu--index-alist nil)
-    (setq imenu-anywhere-cached-candidates
-          (mapcan
-           'imenu-anywhere--candidates-from-entry
-           (imenu--make-index-alist t)))))
+    (delete-if '(lambda (el) (or (null (car el))
+                                 (equal (car el) "*Rescan*")))
+               (sort (mapcan 'imenu-anywhere--candidates-from-entry
+                             (imenu--make-index-alist t))
+                     (lambda (a b) (< (length (car a)) (length (car b))))))))
 
 (defvar imenu-anywhere--preprocess-entry 'imenu-anywhere--preprocess-entry-ido
   "Holds a function to process each entry.
@@ -171,13 +167,12 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
       (ido-init-completion-maps)
       (add-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
       (add-hook 'choose-completion-string-functions 'ido-choose-completion-string)
-      (setq reset-ido t)
-      )
+      (setq reset-ido t))
     (unwind-protect
         (progn
           ;; set up ido completion list
           (let ((imenu-default-goto-function 'imenu-anywhere--goto-function)
-                (index-alist (imenu-anywhere--index-alist modes)))
+                (index-alist (imenu-anywhere-candidates modes)))
             (if (null index-alist)
                 (message "No imenu tags")
               (imenu (imenu-anywhere--read index-alist nil t)))))
@@ -204,7 +199,7 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
 (defun helm-imenu-anywhere-candidates ()
   (with-helm-current-buffer
     (let ((imenu-anywhere--preprocess-entry 'imenu-anywhere--preprocess-entry-helm))
-      (imenu-anywhere--index-alist))))
+      (imenu-anywhere-candidates))))
 
 ;;;###autoload
 (defun helm-imenu-anywhere ()
