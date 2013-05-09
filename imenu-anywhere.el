@@ -121,17 +121,17 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
       (list (cons (car entry) pos)))))
 
 
-(defun imenu-anywhere--guess-default (index-alist symbol)
-  "Guess a default choice from the given symbol."
-  ;; todo: make to return a list of matched symbols not only one, and make regexp more flexible
-  (catch 'found
-    (dolist (regex (list (concat "\\`" (regexp-quote symbol) "\\'")
-                      (concat "\\`" (regexp-quote symbol))
-                      (concat (regexp-quote symbol) "\\'")
-                      (concat (regexp-quote symbol) "$")
-                      (regexp-quote symbol)))
-      (dolist (item index-alist)
-        (if (string-match regex (car item)) (throw 'found (car item)))))))
+(defun imenu-anywhere--guess-default (index-alist str-at-pt)
+  "Guess a default choice from the given imenu list and string at point."
+  (let ((name (regexp-quote str-at-pt)))
+    (catch 'found
+      (dolist (regex (list (concat "\\`" name "\\'")
+                           (concat "\\`" name)
+                           (concat name "\\'")
+                           name))
+        (dolist (item index-alist)
+          (if (string-match regex (car item))
+              (throw 'found (car item))))))))
 
 (defun imenu-anywhere--goto-function (name position &optional rest)
   "Function to be used as `imenu-default-goto-function'"
@@ -147,14 +147,13 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
         (widen))
     (goto-char position)))
 
-(defun imenu-anywhere--read (index-alist &optional arg-prompt guess)
-  "Read a choice from an Imenu alist via Ido."
-  (let* ((symatpt (thing-at-point 'symbol))
-         (default (and guess symatpt (imenu-anywhere--guess-default index-alist symatpt)))
+(defun imenu-anywhere--read (index-alist &optional guess)
+  "Read a choice from an INDEX-ALIST of imenu items via IDO."
+  (let* ((str-at-pt (thing-at-point 'symbol))
+         (default (and guess str-at-pt
+                       (imenu-anywhere--guess-default index-alist str-at-pt)))
          (names (mapcar 'car index-alist))
-         (prompt (or arg-prompt (if default (format "Imenu: (default %s): " default) "Imenu: ")))
-         (name (ido-completing-read prompt names
-                                    nil t nil nil default)))
+         (name (ido-completing-read "Imenu: " names nil t nil nil default)))
     (assoc name index-alist)))
 
 ;;;###autoload
@@ -180,7 +179,7 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
                 (index-alist (imenu-anywhere-candidates modes)))
             (if (null index-alist)
                 (message "No imenu tags")
-              (imenu (imenu-anywhere--read index-alist nil t)))))
+              (imenu (imenu-anywhere--read index-alist t)))))
       ;; ido initialization
       (when reset-ido
         (remove-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
