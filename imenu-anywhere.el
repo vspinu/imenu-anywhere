@@ -125,7 +125,11 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
   "Guess a default choice from the given symbol."
   ;; todo: make to return a list of matched symbols not only one, and make regexp more flexible
   (catch 'found
-    (let ((regex (concat "\\`" (regexp-quote symbol)"\\>")))
+    (dolist (regex (list (concat "\\`" (regexp-quote symbol) "\\'")
+                      (concat "\\`" (regexp-quote symbol))
+                      (concat (regexp-quote symbol) "\\'")
+                      (concat (regexp-quote symbol) "$")
+                      (regexp-quote symbol)))
       (dolist (item index-alist)
         (if (string-match regex (car item)) (throw 'found (car item)))))))
 
@@ -143,12 +147,13 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
         (widen))
     (goto-char position)))
 
-(defun imenu-anywhere--read (index-alist &optional prompt guess)
+(defun imenu-anywhere--read (index-alist &optional arg-prompt guess)
   "Read a choice from an Imenu alist via Ido."
   (let* ((symatpt (thing-at-point 'symbol))
          (default (and guess symatpt (imenu-anywhere--guess-default index-alist symatpt)))
          (names (mapcar 'car index-alist))
-         (name (ido-completing-read (or prompt "Imenu: ") names
+         (prompt (or arg-prompt (if default (format "Imenu: (default %s): " default) "Imenu: ")))
+         (name (ido-completing-read prompt names
                                     nil t nil nil default)))
     (assoc name index-alist)))
 
