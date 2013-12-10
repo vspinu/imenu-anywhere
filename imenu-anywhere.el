@@ -62,7 +62,7 @@ the major modes of interest."
   (when (null modes)
     (setq modes (list major-mode)))
   (apply 'append
-         (mapcar '(lambda (buff)
+         (mapcar (lambda (buff)
                     (when (or (eq modes t) ; all of them
                               (member (buffer-local-value 'major-mode buff) modes))
                       (with-current-buffer buff
