@@ -160,7 +160,7 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
 (defun imenu-anywhere (&optional modes)
   "Switch to a buffer-local tag from Imenu via Ido."
   (interactive "P")
-  (when (called-interactively-p)
+  (when (called-interactively-p 'interactive)
     (if modes
         (setq modes t)))
   (let (reset-ido)
