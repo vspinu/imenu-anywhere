@@ -5,6 +5,7 @@
 ;; Version: DEV
 ;; Keywords: ido, imenu, tags
 ;; URL: https://github.com/vitoshka/imenu-anywhere
+;; Package-Requires: ((cl-lib "0.5"))
 ;;
 ;; This file is NOT part of GNU Emacs.
 ;;
@@ -39,6 +40,7 @@
 
 (require 'ido nil t)
 (require 'imenu)
+(require 'cl-lib)
 
 (defvar imenu-anywhere-use-ido t
   "Use ido even when ido-mode is not enabled.")
@@ -85,11 +87,11 @@ the major modes of interest."
             (not (eq imenu-create-index-function 'imenu-default-create-index-function)))
     ;; (ignore-errors
     (setq imenu--index-alist nil)
-    (delete-if '(lambda (el) (or (null (car el))
-                                 (equal (car el) "*Rescan*")))
-               (sort (mapcan 'imenu-anywhere--candidates-from-entry
-                             (imenu--make-index-alist t))
-                     (lambda (a b) (< (length (car a)) (length (car b))))))))
+    (cl-delete-if '(lambda (el) (or (null (car el))
+                                    (equal (car el) "*Rescan*")))
+                  (sort (cl-mapcan 'imenu-anywhere--candidates-from-entry
+                                   (imenu--make-index-alist t))
+                        (lambda (a b) (< (length (car a)) (length (car b))))))))
 
 (defvar imenu-anywhere--preprocess-entry 'imenu-anywhere--preprocess-entry-ido
   "Holds a function to process each entry.
@@ -114,7 +116,7 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
   (if (imenu--subalist-p entry)
       (mapcar (lambda (sub-entry)
                 (funcall imenu-anywhere--preprocess-entry sub-entry (car entry)))
-              (mapcan 'imenu-anywhere--candidates-from-entry (cdr entry)))
+              (cl-mapcan 'imenu-anywhere--candidates-from-entry (cdr entry)))
     (let ((pos (cdr entry)))
       (unless (markerp pos)
         (setq pos (copy-marker pos))) ;; assumes it is an integer, throw error if not?
