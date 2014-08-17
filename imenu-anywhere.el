@@ -46,6 +46,10 @@
   "Use ido even when ido-mode is not enabled.")
 (defvar imenu-anywhere-delimiter-ido "/")
 (defvar imenu-anywhere-delimiter-helm " / ")
+(defvar imenu-anywhere-buffer-list-function 'buffer-list
+  "Function that returns the list of buffers for `imenu-anywhere' to consider.
+Any buffers that are not on this list will be ignored.")
+(make-variable-buffer-local 'imenu-anywhere-buffer-list-function)
 
 (defvar imenu-anywhere-cached-candidates nil
   "An alist of flatten imenu tags from of the form (name . marker)")
@@ -77,7 +81,7 @@ the major modes of interest."
                             (setq imenu-anywhere-cached-tick tick)
                             (setq imenu-anywhere-cached-candidates
                                   (imenu-anywhere-buffer-candidates)))))))
-                 (buffer-list))))
+                 (funcall imenu-anywhere-buffer-list-function))))
 
 (defun imenu-anywhere-buffer-candidates ()
   "Return an alist of candidates in the current buffer."
