@@ -230,5 +230,7 @@ pyramidal view allows distinguishing different buffers."
   '(add-to-list 'helm-sources-using-default-as-input 'helm-source-imenu-anywhere))
 
 (provide 'imenu-anywhere)
-
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:
 ;;; imenu-anywhere.el ends here
