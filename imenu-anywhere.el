@@ -69,18 +69,18 @@ the major modes of interest."
     (setq modes (list major-mode)))
   (apply 'append
          (mapcar (lambda (buff)
-                    (when (or (eq modes t) ; all of them
-                              (member (buffer-local-value 'major-mode buff) modes))
-                      (with-current-buffer buff
-                        (let ((tick (buffer-modified-tick buff)))
-                          (if (and (eq imenu-anywhere-cached-tick tick)
-                                   (not force-update))
-                              ;; return cached
-                              imenu-anywhere-cached-candidates
-                            ;; else update the indexes if in imenu buffer
-                            (setq imenu-anywhere-cached-tick tick)
-                            (setq imenu-anywhere-cached-candidates
-                                  (imenu-anywhere-buffer-candidates)))))))
+                   (when (or (eq modes t) ; all of them
+                             (member (buffer-local-value 'major-mode buff) modes))
+                     (with-current-buffer buff
+                       (let ((tick (buffer-modified-tick buff)))
+                         (if (and (eq imenu-anywhere-cached-tick tick)
+                                  (not force-update))
+                             ;; return cached
+                             imenu-anywhere-cached-candidates
+                           ;; else update the indexes if in imenu buffer
+                           (setq imenu-anywhere-cached-tick tick)
+                           (setq imenu-anywhere-cached-candidates
+                                 (imenu-anywhere-buffer-candidates)))))))
                  (funcall imenu-anywhere-buffer-list-function))))
 
 (defun imenu-anywhere-buffer-candidates ()
@@ -92,7 +92,7 @@ the major modes of interest."
     ;; (ignore-errors
     (setq imenu--index-alist nil)
     (cl-delete-if '(lambda (el) (or (null (car el))
-                                    (equal (car el) "*Rescan*")))
+                               (equal (car el) "*Rescan*")))
                   (sort (cl-mapcan 'imenu-anywhere--candidates-from-entry
                                    (imenu--make-index-alist t))
                         (lambda (a b) (< (length (car a)) (length (car b))))))))
@@ -218,10 +218,10 @@ Sorting is in increasing order of length of imenu symbols. The
 pyramidal view allows distinguishing different buffers."
   (interactive)
   (let ((imenu-default-goto-function 'imenu-anywhere--goto-function))
-        ;; (imenu-default-goto-function
-        ;;  (if (fboundp 'semantic-imenu-goto-function)
-        ;;      'semantic-imenu-goto-function
-        ;;    'imenu-default-goto-function)))
+    ;; (imenu-default-goto-function
+    ;;  (if (fboundp 'semantic-imenu-goto-function)
+    ;;      'semantic-imenu-goto-function
+    ;;    'imenu-default-goto-function)))
     (helm :sources 'helm-source-imenu-anywhere
           :default (thing-at-point 'symbol)
           :buffer "*helm imenu-anywhere*")))
