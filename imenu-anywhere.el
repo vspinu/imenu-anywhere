@@ -40,7 +40,7 @@
 
 (require 'ido nil t)
 (eval-when-compile
-  (require 'helm)
+  (require 'helm nil t)
   (require 'cl-lib))
 
 
