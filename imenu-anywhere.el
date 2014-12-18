@@ -39,8 +39,10 @@
 
 
 (require 'ido nil t)
-(require 'imenu)
-(require 'cl-lib)
+(eval-when-compile
+  (require 'helm)
+  (require 'cl-lib))
+
 
 (defvar imenu-anywhere-use-ido t
   "Use ido even when ido-mode is not enabled.")
