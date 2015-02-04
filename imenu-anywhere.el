@@ -39,6 +39,7 @@
 
 
 (require 'ido nil t)
+(require 'imenu)
 (eval-when-compile
   (require 'helm nil t)
   (require 'cl-lib))
