@@ -199,14 +199,14 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
 (defalias 'ido-imenu-anywhere 'imenu-anywhere)
 
 (defvar helm-source-imenu-anywhere
-  '((name . "imenu-anywere")
-    (candidates . helm-imenu-anywhere-candidates)
-    (persistent-action . (lambda (elm)
-                           (imenu-anywhere--goto-function "" elm)
-                           (unless (fboundp 'semantic-imenu-tag-overlay)
-                             (helm-highlight-current-line))))
-    (persistent-help . "Show this entry")
-    (action . (lambda (elm) (imenu-anywhere--goto-function "" elm))))
+  (helm-build-sync-source "imenu-anywere"
+    :candidates #'helm-imenu-anywhere-candidates
+    :persistent-action (lambda (elm)
+                         (imenu-anywhere--goto-function "" elm)
+                         (unless (fboundp 'semantic-imenu-tag-overlay)
+                           (helm-highlight-current-line)))
+    :persistent-help "Show this entry"
+    :action (lambda (elm) (imenu-anywhere--goto-function "" elm)))
   "See (info \"(emacs)Imenu\") and `imenu-anywhere'")
 
 (defun helm-imenu-anywhere-candidates ()
