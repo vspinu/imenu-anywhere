@@ -204,7 +204,7 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
     (persistent-action . (lambda (elm)
                            (imenu-anywhere--goto-function "" elm)
                            (unless (fboundp 'semantic-imenu-tag-overlay)
-                             (helm-match-line-color-current-line))))
+                             (helm-highlight-current-line))))
     (persistent-help . "Show this entry")
     (action . (lambda (elm) (imenu-anywhere--goto-function "" elm))))
   "See (info \"(emacs)Imenu\") and `imenu-anywhere'")
