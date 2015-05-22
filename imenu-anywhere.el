@@ -41,7 +41,6 @@
 (require 'ido nil t)
 (require 'imenu)
 (eval-when-compile
-  (require 'helm nil t)
   (require 'cl-lib))
 
 
@@ -198,16 +197,19 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
 ;;;###autoload
 (defalias 'ido-imenu-anywhere 'imenu-anywhere)
 
-(defvar helm-source-imenu-anywhere
-  (helm-build-sync-source "imenu-anywere"
-    :candidates #'helm-imenu-anywhere-candidates
-    :persistent-action (lambda (elm)
-                         (imenu-anywhere--goto-function "" elm)
-                         (unless (fboundp 'semantic-imenu-tag-overlay)
-                           (helm-highlight-current-line)))
-    :persistent-help "Show this entry"
-    :action (lambda (elm) (imenu-anywhere--goto-function "" elm)))
-  "See (info \"(emacs)Imenu\") and `imenu-anywhere'")
+(eval-after-load "helm"
+  '(progn
+     (defvar helm-source-imenu-anywhere
+       (helm-build-sync-source "imenu-anywere"
+         :candidates #'helm-imenu-anywhere-candidates
+         :persistent-action (lambda (elm)
+                              (imenu-anywhere--goto-function "" elm)
+                              (unless (fboundp 'semantic-imenu-tag-overlay)
+                                (helm-highlight-current-line)))
+         :persistent-help "Show this entry"
+         :action (lambda (elm) (imenu-anywhere--goto-function "" elm)))
+       "See (info \"(emacs)Imenu\") and `imenu-anywhere'")
+     (add-to-list 'helm-sources-using-default-as-input 'helm-source-imenu-anywhere)))
 
 (defun helm-imenu-anywhere-candidates ()
   (with-helm-current-buffer
@@ -220,6 +222,8 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
 Sorting is in increasing order of length of imenu symbols. The
 pyramidal view allows distinguishing different buffers."
   (interactive)
+  (unless (require 'helm nil t)
+    (error "[imenu-anywhere]: This command requires the 'helm' package"))
   (let ((imenu-default-goto-function 'imenu-anywhere--goto-function))
     ;; (imenu-default-goto-function
     ;;  (if (fboundp 'semantic-imenu-goto-function)
@@ -228,9 +232,6 @@ pyramidal view allows distinguishing different buffers."
     (helm :sources 'helm-source-imenu-anywhere
           :default (thing-at-point 'symbol)
           :buffer "*helm imenu-anywhere*")))
-
-(eval-after-load "helm"
-  '(add-to-list 'helm-sources-using-default-as-input 'helm-source-imenu-anywhere))
 
 (provide 'imenu-anywhere)
 ;; Local Variables:
