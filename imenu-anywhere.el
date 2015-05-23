@@ -37,6 +37,7 @@
 ;; helm (https://github.com/emacs-helm) interface instead of IDO. Helm library
 ;; is not loaded by imenu-anywhere.el and you have to install helm separately.
 
+;;; Code:
 
 (require 'ido nil t)
 (require 'imenu)
@@ -54,7 +55,7 @@ Any buffers that are not on this list will be ignored.")
 (make-variable-buffer-local 'imenu-anywhere-buffer-list-function)
 
 (defvar imenu-anywhere-cached-candidates nil
-  "An alist of flatten imenu tags from of the form (name . marker)")
+  "An alist of flatten imenu tags from of the form (name . marker).")
 (make-variable-buffer-local 'imenu-anywhere-cached-candidates)
 (defvar imenu-anywhere-cached-tick nil
   "Value of buffer's tick counter at last imenu-anywere update.")
@@ -142,7 +143,7 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
               (throw 'found (car item))))))))
 
 (defun imenu-anywhere--goto-function (name position &optional rest)
-  "Function to be used as `imenu-default-goto-function'"
+  "Function to be used as `imenu-default-goto-function'."
   (let* ((is-overlay (overlayp position))
          (buff (or (and is-overlay (overlay-buffer position))
                    (marker-buffer position)))
@@ -219,7 +220,7 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
 ;;;###autoload
 (defun helm-imenu-anywhere ()
   "`helm' source for `imenu-anywhere'.
-Sorting is in increasing order of length of imenu symbols. The
+Sorting is in increasing order of length of imenu symbols.  The
 pyramidal view allows distinguishing different buffers."
   (interactive)
   (unless (require 'helm nil t)
