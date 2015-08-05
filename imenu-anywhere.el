@@ -177,7 +177,8 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
                 (featurep 'ido )
                 imenu-anywhere-use-ido)
       ;; ido initialization
-      (ido-init-completion-maps)
+      (with-no-warnings
+        (ido-init-completion-maps))
       (add-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
       (add-hook 'choose-completion-string-functions 'ido-choose-completion-string)
       (setq reset-ido t))
