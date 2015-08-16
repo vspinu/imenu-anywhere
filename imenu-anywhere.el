@@ -100,6 +100,20 @@ the major modes of interest."
                                    (imenu--make-index-alist t))
                         (lambda (a b) (< (length (car a)) (length (car b))))))))
 
+(defun imenu-anywhere--candidates-from-entry (entry)
+  "Create candidates from imenu ENTRY.
+Return a list of entries when entry is a `imenu--subalist-p' or a
+list of one entry otherwise."
+  (let ((ecdr (cdr entry)))
+    (cond ((imenu--subalist-p entry)
+           (mapcar (lambda (sub-entry)
+                     (funcall imenu-anywhere--preprocess-entry sub-entry (car entry)))
+                   (cl-mapcan 'imenu-anywhere--candidates-from-entry (cdr entry))))
+          ((integerp ecdr)
+           (list (cons (car entry) (copy-marker ecdr))))
+          ((and (listp ecdr) (eq (car ecdr) 'IGNORE)) nil)
+          (t (list entry)))))
+
 (defvar imenu-anywhere--preprocess-entry 'imenu-anywhere--preprocess-entry-ido
   "Holds a function to process each entry.
 See the code for `imenu-anywhere--preprocess-entry-ido' and
@@ -116,19 +130,6 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
                         imenu-anywhere-delimiter-helm
                         (car entry)))
   entry)
-
-
-(defun imenu-anywhere--candidates-from-entry (entry)
-  "Create candidates from imenu ENTRY."
-  (if (imenu--subalist-p entry)
-      (mapcar (lambda (sub-entry)
-                (funcall imenu-anywhere--preprocess-entry sub-entry (car entry)))
-              (cl-mapcan 'imenu-anywhere--candidates-from-entry (cdr entry)))
-    (let ((pos (cdr entry)))
-      (unless (markerp pos)
-        (setq pos (copy-marker pos))) ;; assumes it is an integer, throw error if not?
-      (list (cons (car entry) pos)))))
-
 
 (defun imenu-anywhere--guess-default (index-alist str-at-pt)
   "Guess a default choice from the given imenu list and string at point."
@@ -193,8 +194,7 @@ See the code for `imenu-anywhere--preprocess-entry-ido' and
       ;; ido initialization
       (when reset-ido
         (remove-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
-        (remove-hook 'choose-completion-string-functions 'ido-choose-completion-string)
-        ))))
+        (remove-hook 'choose-completion-string-functions 'ido-choose-completion-string)))))
 
 ;;;###autoload
 (defalias 'ido-imenu-anywhere 'imenu-anywhere)
