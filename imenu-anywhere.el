@@ -100,6 +100,11 @@ the major modes of interest."
                                    (imenu--make-index-alist t))
                         (lambda (a b) (< (length (car a)) (length (car b))))))))
 
+(defvar imenu-anywhere--preprocess-entry 'imenu-anywhere--preprocess-entry-ido
+  "Holds a function to process each entry.
+See the code for `imenu-anywhere--preprocess-entry-ido' and
+`imenu-anywhere--preprocess-entry-helm'")
+
 (defun imenu-anywhere--candidates-from-entry (entry)
   "Create candidates from imenu ENTRY.
 Return a list of entries when entry is a `imenu--subalist-p' or a
@@ -113,11 +118,6 @@ list of one entry otherwise."
            (list (cons (car entry) (copy-marker ecdr))))
           ((and (listp ecdr) (eq (car ecdr) 'IGNORE)) nil)
           (t (list entry)))))
-
-(defvar imenu-anywhere--preprocess-entry 'imenu-anywhere--preprocess-entry-ido
-  "Holds a function to process each entry.
-See the code for `imenu-anywhere--preprocess-entry-ido' and
-`imenu-anywhere--preprocess-entry-helm'")
 
 (defun imenu-anywhere--preprocess-entry-ido (entry prefix)
   (setcar entry (concat (replace-regexp-in-string "\\c-*$" "" (car entry))
