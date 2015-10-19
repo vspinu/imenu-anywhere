@@ -199,6 +199,12 @@ list of one entry otherwise."
 ;;;###autoload
 (defalias 'ido-imenu-anywhere 'imenu-anywhere)
 
+(defvar helm-sources-using-default-as-input)
+(declare-function helm 'helm)
+(declare-function helm-highlight-current-line 'helm-utils)
+(declare-function helm-build-sync-source 'helm-source)
+(declare-function with-helm-current-buffer 'helm-lib)
+
 (eval-after-load "helm"
   '(progn
      (defvar helm-source-imenu-anywhere
