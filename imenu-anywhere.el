@@ -200,10 +200,10 @@ list of one entry otherwise."
 (defalias 'ido-imenu-anywhere 'imenu-anywhere)
 
 (defvar helm-sources-using-default-as-input)
-(declare-function helm 'helm)
-(declare-function helm-highlight-current-line 'helm-utils)
-(declare-function helm-build-sync-source 'helm-source)
-(declare-function with-helm-current-buffer 'helm-lib)
+(autoload 'helm "helm")
+(autoload 'helm-highlight-current-line "helm-utils")
+(autoload 'helm-build-sync-source "helm-source")
+(autoload 'with-helm-current-buffer "helm-lib")
 
 (eval-after-load "helm"
   '(progn
