@@ -1,6 +1,6 @@
 ;;; imenu-anywhere.el --- ido/helm imenu tag selection across all buffers with the same mode
 ;;
-;; Copyright (C) 2011-2015 Vitalie Spinu
+;; Copyright (C) 2011-2016 Vitalie Spinu
 ;; Author: Vitalie Spinu  <spinuvit.list[ aaattt ]gmail[ dot ]com>
 ;; Version: DEV
 ;; Keywords: ido, imenu, tags
@@ -25,8 +25,8 @@
 ;;; Commentary:
 ;;
 ;; `imenu-anywhere` command pops an IDO interface with all the imenu tags across
-;; all buffers with the same mode as the current one. In a sense it is similar
-;; to etag selection, but works only for the open buffers. This is often more
+;; all buffers with the same mode as the current one.  In a sense it is similar
+;; to etag selection, but works only for the open buffers.  This is often more
 ;; convenient as you don't have to explicitly build the etags table.
 ;;
 ;; To activate, just bind imenu-anywhere to a convenient key:
@@ -34,7 +34,7 @@
 ;;    (global-set-key (kbd "C-.") 'imenu-anywhere)
 ;;
 ;; There is also `helm-imenu-anywhere` which is like imenu-anywhere but uses
-;; helm (https://github.com/emacs-helm) interface instead of IDO. Helm library
+;; helm (https://github.com/emacs-helm) interface instead of IDO.  Helm library
 ;; is not loaded by imenu-anywhere.el and you have to install helm separately.
 
 ;;; Code:
@@ -44,11 +44,20 @@
 (eval-when-compile
   (require 'cl-lib))
 
+;;; Customization
+(defgroup imenu-anywhere nil
+  "Imenu tag selection across multiple buffers."
+  :group 'tools
+  :group 'convenience)
 
-(defvar imenu-anywhere-use-ido t
-  "Use ido even when ido-mode is not enabled.")
-(defvar imenu-anywhere-delimiter-ido "/")
-(defvar imenu-anywhere-delimiter-helm " / ")
+(defcustom imenu-anywhere-use-ido t
+  "Use ido even when `ido-mode' is not enabled."
+  :group 'imenu-anywhere
+  :type 'boolean)
+
+(defconst imenu-anywhere-delimiter-ido "/")
+(defconst imenu-anywhere-delimiter-helm " / ")
+
 (defvar imenu-anywhere-buffer-list-function 'buffer-list
   "Function that returns the list of buffers for `imenu-anywhere' to consider.
 Any buffers that are not on this list will be ignored.")
