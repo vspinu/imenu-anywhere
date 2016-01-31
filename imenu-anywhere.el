@@ -44,9 +44,17 @@
 (eval-when-compile
   (require 'cl-lib))
 
+;;; Customization
+(defgroup imenu-anywhere nil
+  "Imenu tag selection across multiple buffers."
+  :group 'tools
+  :group 'convenience)
 
-(defvar imenu-anywhere-use-ido t
-  "Use ido even when ido-mode is not enabled.")
+(defcustom imenu-anywhere-use-ido t
+  "Use ido even when `ido-mode' is not enabled."
+  :group 'imenu-anywhere
+  :type 'boolean)
+
 (defvar imenu-anywhere-delimiter-ido "/")
 (defvar imenu-anywhere-delimiter-helm " / ")
 (defvar imenu-anywhere-buffer-list-function 'buffer-list
