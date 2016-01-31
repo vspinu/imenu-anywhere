@@ -1,6 +1,6 @@
 ;;; imenu-anywhere.el --- ido/helm imenu tag selection across all buffers with the same mode
 ;;
-;; Copyright (C) 2011-2015 Vitalie Spinu
+;; Copyright (C) 2011-2016 Vitalie Spinu
 ;; Author: Vitalie Spinu  <spinuvit.list[ aaattt ]gmail[ dot ]com>
 ;; Version: DEV
 ;; Keywords: ido, imenu, tags
