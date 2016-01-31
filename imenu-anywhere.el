@@ -202,8 +202,8 @@ list of one entry otherwise."
 (defvar helm-sources-using-default-as-input)
 (autoload 'helm "helm")
 (autoload 'helm-highlight-current-line "helm-utils")
-(autoload 'helm-build-sync-source "helm-source")
-(autoload 'with-helm-current-buffer "helm-lib")
+(autoload 'helm-build-sync-source "helm-source" nil nil 'macro)
+(autoload 'with-helm-current-buffer "helm-lib" nil nil 'macro)
 
 (eval-after-load "helm"
   '(progn
