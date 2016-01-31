@@ -55,8 +55,9 @@
   :group 'imenu-anywhere
   :type 'boolean)
 
-(defvar imenu-anywhere-delimiter-ido "/")
-(defvar imenu-anywhere-delimiter-helm " / ")
+(defconst imenu-anywhere-delimiter-ido "/")
+(defconst imenu-anywhere-delimiter-helm " / ")
+
 (defvar imenu-anywhere-buffer-list-function 'buffer-list
   "Function that returns the list of buffers for `imenu-anywhere' to consider.
 Any buffers that are not on this list will be ignored.")
