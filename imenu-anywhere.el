@@ -109,11 +109,6 @@ the major modes of interest."
                                    (imenu--make-index-alist t))
                         (lambda (a b) (< (length (car a)) (length (car b))))))))
 
-(defvar imenu-anywhere--preprocess-entry 'imenu-anywhere--preprocess-entry-ido
-  "Holds a function to process each entry.
-See the code for `imenu-anywhere--preprocess-entry-ido' and
-`imenu-anywhere--preprocess-entry-helm'")
-
 (defun imenu-anywhere--candidates-from-entry (entry)
   "Create candidates from imenu ENTRY.
 Return a list of entries when entry is a `imenu--subalist-p' or a
@@ -128,11 +123,27 @@ list of one entry otherwise."
           ((and (listp ecdr) (eq (car ecdr) 'IGNORE)) nil)
           (t (list entry)))))
 
+(defvar imenu-anywhere--preprocess-entry 'imenu-anywhere--preprocess-entry-ido
+  "Holds a function to process each entry.
+See the code for `imenu-anywhere--preprocess-entry-ido' and
+`imenu-anywhere--preprocess-entry-helm'")
+
 (defun imenu-anywhere--preprocess-entry-ido (entry prefix)
-  (setcar entry (concat (replace-regexp-in-string "\\c-*$" "" (car entry))
-                        imenu-anywhere-delimiter-ido
-                        prefix))
-  entry)
+  (let* ((entry-name (replace-regexp-in-string "\\c-*$" "" (car entry)))
+         ;; in python hierarchical entry is defined as ("foo"
+         ;; (*function-definition* ...) (sub-name ..)) where "foo" is the
+         ;; ENTRY-NAME from above and *function-definition* is PREFIX. In this
+         ;; case we need to reverse the position. We detect such entries by
+         ;; assuming that they are enclosed in *..* and hope for the best.
+         (reverse (string-match-p "^\\*.*\\*$" entry-name)))
+    (setcar entry (if reverse
+                      (concat prefix
+                              imenu-anywhere-delimiter-ido
+                              entry-name)
+                    (concat entry-name
+                            imenu-anywhere-delimiter-ido
+                            prefix)))
+  entry))
 
 (defun imenu-anywhere--preprocess-entry-helm (entry prefix)
   (setcar entry (concat prefix
