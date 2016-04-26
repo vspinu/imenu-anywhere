@@ -234,6 +234,7 @@ list of one entry otherwise."
                               (imenu-anywhere--goto-function "" elm)
                               (unless (fboundp 'semantic-imenu-tag-overlay)
                                 (helm-highlight-current-line)))
+         :fuzzy-match helm-imenu-fuzzy-match
          :persistent-help "Show this entry"
          :action (lambda (elm) (imenu-anywhere--goto-function "" elm)))
        "See (info \"(emacs)Imenu\") and `imenu-anywhere'")
