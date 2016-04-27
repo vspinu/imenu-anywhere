@@ -227,6 +227,7 @@ list of one entry otherwise."
 
 (eval-after-load "helm"
   '(progn
+     (require 'helm-imenu)
      (defvar helm-source-imenu-anywhere
        (helm-build-sync-source "imenu-anywere"
          :candidates #'helm-imenu-anywhere-candidates
