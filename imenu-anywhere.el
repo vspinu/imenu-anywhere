@@ -1,4 +1,4 @@
-;;; imenu-anywhere.el --- ido/helm imenu tag selection across all buffers with the same mode
+;;; imenu-anywhere.el --- ido/ivy/helm imenu across same mode/project/etc buffers
 ;;
 ;; Copyright (C) 2011-2016 Vitalie Spinu
 ;; Author: Vitalie Spinu  <spinuvit.list[ aaattt ]gmail[ dot ]com>
@@ -24,25 +24,27 @@
 ;;
 ;;; Commentary:
 ;;
-;; `imenu-anywhere` command pops an IDO interface with all the imenu tags across
-;; all buffers with the same mode as the current one.  In a sense it is similar
-;; to etag selection, but works only for the open buffers.  This is often more
-;; convenient as you don't have to explicitly build the etags table.
+;; `imenu-anywhere` provides navigation for imenu tags across all buffers that
+;; satisfy grouping criteria. Available criteria include - all buffers with the
+;; same major mode, same project buffers and user defined list of friendly mode
+;; buffers.
 ;;
-;; To activate, just bind imenu-anywhere to a convenient key:
+;; To activate, just bind `imenu-anywhere' to a convenient key:
 ;;
 ;;    (global-set-key (kbd "C-.") 'imenu-anywhere)
 ;;
-;; There is also `helm-imenu-anywhere` which is like imenu-anywhere but uses
-;; helm (https://github.com/emacs-helm) interface instead of IDO.  Helm library
-;; is not loaded by imenu-anywhere.el and you have to install helm separately.
-
+;; By default `imenu-anywhere' uses plain `completing-read'. `ido-imenu-anywhere',
+;; `ivy-imenu-anywhere' and `helm-imenu-anywhere' are specialized interfaces.
+;;
+;; Several filtering strategies are available - same-mode buffers, same-project
+;; buffers and user defined friendly buffers. See
+;; `imenu-anywhere-buffer-filter-functions'.
+;;
 ;;; Code:
 
-(require 'ido nil t)
 (require 'imenu)
 (eval-when-compile
-  (require 'cl-lib))
+  (require 'cl-extra))
 
 ;;; Customization
 (defgroup imenu-anywhere nil
@@ -50,48 +52,102 @@
   :group 'tools
   :group 'convenience)
 
-(defcustom imenu-anywhere-use-ido t
-  "Use ido even when `ido-mode' is not enabled."
+(defcustom imenu-anywhere-friendly-modes
+  '((clojure-mode cider-repl-mode)
+    (emacs-lisp-mode inferior-emacs-lisp-mode lisp-interaction-mode)
+    (ess-mode inferior-ess-mode)
+    (python-mode inferior-python-mode))
+  "List of lists of friendly modes.
+Each sub-lists contains set of modes which are mutually
+accessible. That is, if mode A and B are in the same sub-list
+then imenu items from buffer with mode B are accessible from
+buffer with mode A and vice versa."
   :group 'imenu-anywhere
-  :type 'boolean)
+  :type '(repeat (repeat symbol)))
 
-(defconst imenu-anywhere-delimiter-ido "/")
-(defconst imenu-anywhere-delimiter-helm " / ")
+(defcustom imenu-anywhere-buffer-filter-functions
+  '(imenu-anywhere-same-mode-p
+    imenu-anywhere-friendly-mode-p
+    imenu-anywhere-same-project-p)
+  "List of functions returning non-nil when buffer is suitable imenu candidate.
+Each function must accept two arguments CURRENT-BUFFER and
+BUFFER. If function returns non-nil, imenu items from BUFFER are
+accessible from CURRENT-BUFFER. See also
+`imenu-anywhere-buffer-list-function'.
 
-(defvar imenu-anywhere-buffer-list-function 'buffer-list
+Filters defined in this package are:
+ `imenu-anywhere-same-mode-p',
+ `imenu-anywhere-friendly-mode-p' and
+ `imenu-anywhere-same-project-p'."
+  :group 'imenu-anywhere
+  :type '(repeat symbol))
+
+(defun imenu-anywhere-same-mode-p (current other)
+  "Return non-nil if buffers CURRENT and OTHER have same mode."
+  (eq (buffer-local-value 'major-mode current)
+      (buffer-local-value 'major-mode other)))
+
+(defun imenu-anywhere-friendly-mode-p (current other)
+  "Return non-nil if buffers CURRENT and OTHER have friendly modes.
+Friendly modes are defined by `imenu-anywhere-friendly-modes'."
+  (let ((cmode (buffer-local-value 'major-mode current))
+        (omode (buffer-local-value 'major-mode other)))
+    (cl-some (lambda (mlist)
+               (and (member cmode mlist)
+                    (member omode mlist)))
+             imenu-anywhere-friendly-modes)))
+
+(defun imenu-anywhere-same-project-p (current other)
+  "Return non-nil if buffers CURRENT and OTHER are part of the same project.
+Currently only projectile projects are supported."
+  (unless imenu-anywhere--project-buffers
+    (when (fboundp 'projectile-project-buffers)
+      (let (projectile-require-project-root)
+        (setq-local imenu-anywhere--project-buffers
+                    (funcall 'projectile-project-buffers)))))
+  (member other imenu-anywhere--project-buffers))
+
+
+(defvar imenu-anywhere-delimiter "/")
+
+(defvar imenu-anywhere-preprocess-entry-function 'imenu-anywhere-preprocess-for-completion
+  "Holds a function to process each entry.
+Function must accept two arguments - entry and entry name. See
+the code for `imenu-anywhere-preprocess-for-completion' and
+`imenu-anywhere-preprocess-for-listing' for examples.")
+
+(defvar-local imenu-anywhere-buffer-list-function 'buffer-list
   "Function that returns the list of buffers for `imenu-anywhere' to consider.
-Any buffers that are not on this list will be ignored.")
-(make-variable-buffer-local 'imenu-anywhere-buffer-list-function)
+Any buffers that are not on this list will be ignored. This
+function is called before filters in
+`imenu-anywhere-buffer-filter-functions'.")
 
-(defvar imenu-anywhere-cached-candidates nil
-  "An alist of flatten imenu tags from of the form (name . marker).")
-(make-variable-buffer-local 'imenu-anywhere-cached-candidates)
-(defvar imenu-anywhere-cached-tick nil
-  "Value of buffer's tick counter at last imenu-anywere update.")
-(make-variable-buffer-local 'imenu-anywhere-cached-tick)
+(defvar imenu-anywhere--project-buffers nil)
+(defvar-local imenu-anywhere--cached-candidates nil)
+(defvar-local imenu-anywhere--cached-tick nil)
 
+(defun imenu-anywhere--reachable-buffer-p (buffer)
+  (cl-some (lambda (fun)
+             (funcall fun (current-buffer) buffer))
+           imenu-anywhere-buffer-filter-functions))
 
-(defun imenu-anywhere-candidates (&optional modes force-update)
-  "Return an alist of imenu tags from buffers where imenu is meaningful.
-If MODES is nil look only for buffers with the mode equal to the
-mode of the current buffer.  If MODES is t return all the buffers
-irrespective of mode.  Else MODES must be a _list_ of symbols of
-the major modes of interest."
-  (when (null modes)
-    (setq modes (list major-mode)))
+(defun imenu-anywhere-candidates ()
+  "Return an alist of imenu tags from reachable buffers.
+Reachable buffers are determined by applying functions in
+`imenu-anywhere-buffer-filter-functions' to all buffers returned
+by `imenu-anywhere-buffer-list-function'."
+  (setq imenu-anywhere--project-buffers nil)
   (apply 'append
          (mapcar (lambda (buff)
-                   (when (or (eq modes t) ; all of them
-                             (member (buffer-local-value 'major-mode buff) modes))
+                   (when (imenu-anywhere--reachable-buffer-p buff)
                      (with-current-buffer buff
                        (let ((tick (buffer-modified-tick buff)))
-                         (if (and (eq imenu-anywhere-cached-tick tick)
-                                  (not force-update))
+                         (if (eq imenu-anywhere--cached-tick tick)
                              ;; return cached
-                             imenu-anywhere-cached-candidates
+                             imenu-anywhere--cached-candidates
                            ;; else update the indexes if in imenu buffer
-                           (setq imenu-anywhere-cached-tick tick)
-                           (setq imenu-anywhere-cached-candidates
+                           (setq imenu-anywhere--cached-tick tick)
+                           (setq imenu-anywhere--cached-candidates
                                  (imenu-anywhere-buffer-candidates)))))))
                  (funcall imenu-anywhere-buffer-list-function))))
 
@@ -102,18 +158,13 @@ the major modes of interest."
             (and imenu-prev-index-position-function
                  imenu-extract-index-name-function)
             (not (eq imenu-create-index-function 'imenu-default-create-index-function)))
-    ;; (ignore-errors
     (setq imenu--index-alist nil)
     (cl-delete-if '(lambda (el) (or (null (car el))
-                               (equal (car el) "*Rescan*")))
+                                    (equal (car el) "*Rescan*")))
                   (sort (cl-mapcan 'imenu-anywhere--candidates-from-entry
                                    (imenu--make-index-alist t))
                         (lambda (a b) (< (length (car a)) (length (car b))))))))
 
-(defvar imenu-anywhere--preprocess-entry 'imenu-anywhere--preprocess-entry-ido
-  "Holds a function to process each entry.
-See the code for `imenu-anywhere--preprocess-entry-ido' and
-`imenu-anywhere--preprocess-entry-helm'")
 
 (defun imenu-anywhere--candidates-from-entry (entry)
   "Create candidates from imenu ENTRY.
@@ -122,14 +173,19 @@ list of one entry otherwise."
   (let ((ecdr (cdr entry)))
     (cond ((imenu--subalist-p entry)
            (mapcar (lambda (sub-entry)
-                     (funcall imenu-anywhere--preprocess-entry sub-entry (car entry)))
+                     (funcall imenu-anywhere-preprocess-entry-function
+                              sub-entry (car entry)))
                    (cl-mapcan 'imenu-anywhere--candidates-from-entry (cdr entry))))
           ((integerp ecdr)
            (list (cons (car entry) (copy-marker ecdr))))
           ((and (listp ecdr) (eq (car ecdr) 'IGNORE)) nil)
           (t (list entry)))))
 
-(defun imenu-anywhere--preprocess-entry-ido (entry prefix)
+(defun imenu-anywhere-preprocess-for-completion (entry entry-name)
+  "Default function for `imenu-anywhere-preprocess-entry-function'.
+Concatenate imenu ENTRY and ENTRY-NAME in a meaningful way. This
+pre-processing is suitable for minibuffer completion mechanisms
+such as `completing-read' or `ido-completing-read'."
   (let* ((entry-name (replace-regexp-in-string "\\c-*$" "" (car entry)))
          ;; in python hierarchical entry is defined as ("foo"
          ;; (*function-definition* ...) (sub-name ..)) where "foo" is the
@@ -138,18 +194,19 @@ list of one entry otherwise."
          ;; assuming that they are enclosed in *..* and hope for the best.
          (reverse (string-match-p "^\\*.*\\*$" entry-name)))
     (setcar entry (if reverse
-                      (concat prefix
-                              imenu-anywhere-delimiter-ido
+                      (concat entry-name
+                              imenu-anywhere-delimiter
                               entry-name)
                     (concat entry-name
-                            imenu-anywhere-delimiter-ido
-                            prefix)))
-  entry))
+                            imenu-anywhere-delimiter
+                            entry-name)))
+    entry))
 
-(defun imenu-anywhere--preprocess-entry-helm (entry prefix)
-  (setcar entry (concat prefix
-                        imenu-anywhere-delimiter-helm
-                        (car entry)))
+(defun imenu-anywhere-preprocess-for-listing (entry entry-name)
+  "Pre-processor of imenu ENTRY suitable for hierarchical listings.
+ENTRY-NAME is commonly a class or type of the object. Helm and
+IVY backends use this pre-processing strategy."
+  (setcar entry (concat entry-name imenu-anywhere-delimiter (car entry)))
   entry)
 
 (defun imenu-anywhere--guess-default (index-alist str-at-pt)
@@ -164,61 +221,77 @@ list of one entry otherwise."
           (if (string-match regex (car item))
               (throw 'found (car item))))))))
 
-(defun imenu-anywhere--goto-function (name position &optional rest)
-  "Function to be used as `imenu-default-goto-function'."
+(defun imenu-anywhere-goto (name position &optional rest)
+  "Function used as `imenu-default-goto-function'."
   (let* ((is-overlay (overlayp position))
          (buff (or (and is-overlay (overlay-buffer position))
                    (marker-buffer position)))
          (position (or (and is-overlay (overlay-start position))
                        (marker-position position))))
-    (switch-to-buffer buff)
-    (if (or (< position (point-min))
-            (> position (point-max)))
-        ;; widen if outside narrowing
-        (widen))
+    (if (get-buffer-window buff 'visible)
+        (pop-to-buffer buff)
+      (switch-to-buffer buff))
+    (when (or (< position (point-min))
+              (> position (point-max)))
+      (widen))
     (goto-char position)))
 
-(defun imenu-anywhere--read (index-alist &optional guess)
-  "Read a choice from an INDEX-ALIST of imenu items via IDO."
+(defun imenu-anywhere--read (index-alist)
+  "Read a choice from an INDEX-ALIST of imenu items via
+`completing-read'."
   (let* ((str-at-pt (thing-at-point 'symbol))
-         (default (and guess str-at-pt
+         (default (and str-at-pt
                        (imenu-anywhere--guess-default index-alist str-at-pt)))
          (names (mapcar 'car index-alist))
-         (name (ido-completing-read "Imenu: " names nil t nil nil default)))
+         (name (completing-read "Imenu: " names nil t nil nil default)))
     (assoc name index-alist)))
 
 ;;;###autoload
-(defun imenu-anywhere (&optional modes)
-  "Switch to a buffer-local tag from Imenu via Ido."
-  (interactive "P")
-  (when (called-interactively-p 'interactive)
-    (if modes
-        (setq modes t)))
-  (let (reset-ido)
-    (when  (and (not ido-mode)
-                (featurep 'ido )
-                imenu-anywhere-use-ido)
-      ;; ido initialization
-      (with-no-warnings
-        (ido-init-completion-maps))
-      (add-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
-      (add-hook 'choose-completion-string-functions 'ido-choose-completion-string)
-      (setq reset-ido t))
-    (unwind-protect
-        (progn
-          ;; set up ido completion list
-          (let ((imenu-default-goto-function 'imenu-anywhere--goto-function)
-                (index-alist (imenu-anywhere-candidates modes)))
-            (if (null index-alist)
-                (message "No imenu tags")
-              (imenu (imenu-anywhere--read index-alist t)))))
-      ;; ido initialization
-      (when reset-ido
-        (remove-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
-        (remove-hook 'choose-completion-string-functions 'ido-choose-completion-string)))))
+(defun imenu-anywhere ()
+  "Go to imenu tag defined in all reachable buffers.
+Reachable buffers are determined by applying functions in
+`imenu-anywhere-buffer-filter-functions' to all buffers returned
+by `imenu-anywhere-buffer-list-function'."
+  (interactive)
+  (let ((imenu-default-goto-function 'imenu-anywhere-goto)
+        (index-alist (imenu-anywhere-candidates)))
+    (if (null index-alist)
+        (message "No imenu tags")
+      (imenu (imenu-anywhere--read index-alist)))))
+
+
+;;; IDO
 
 ;;;###autoload
-(defalias 'ido-imenu-anywhere 'imenu-anywhere)
+(defun ido-imenu-anywhere ()
+  "IDO interface for `imenu-anywhere'.
+This is a simple wrapper around `imenu-anywhere' which uses
+`ido-completing-read' as `completing-read-function'. If you use
+`ido-ubiquitous' you might be better off by using `ido-anywhere'
+instead, but there should be little or no difference."
+  (interactive)
+  (require 'ido)
+  (let ((completing-read-function 'ido-completing-read))
+    (imenu-anywhere)))
+
+
+;;; IVY
+
+;;;###autoload
+(defun ivy-imenu-anywhere ()
+  "IVY interface for `imenu-anywhere'
+This is a simple wrapper around `imenu-anywhere' which uses
+`ivy-completing-read' as `completing-read-function'."
+  (interactive)
+  (unless (require 'ivy nil t)
+    (error "[imenu-anywhere]: This command requires 'ivy' package"))
+  (let ((ivy-sort-functions-alist)
+        (imenu-anywhere-preprocess-entry-function #'imenu-anywhere-preprocess-for-listing)
+        (completing-read-function 'ivy-completing-read))
+    (imenu-anywhere)))
+
+
+;;; HELM
 
 (defvar helm-sources-using-default-as-input)
 (autoload 'helm "helm")
@@ -238,31 +311,30 @@ list of one entry otherwise."
                                 (helm-highlight-current-line)))
          :fuzzy-match helm-imenu-fuzzy-match
          :persistent-help "Show this entry"
-         :action (lambda (elm) (imenu-anywhere--goto-function "" elm)))
-       "See (info \"(emacs)Imenu\") and `imenu-anywhere'")
+         :action (lambda (elm) (imenu-anywhere-goto "" elm)))
+       "Helm source for `imenu-anywhere' (which see).")
      (add-to-list 'helm-sources-using-default-as-input 'helm-source-imenu-anywhere)))
 
 (defun helm-imenu-anywhere-candidates ()
   (with-helm-current-buffer
-    (let ((imenu-anywhere--preprocess-entry 'imenu-anywhere--preprocess-entry-helm))
+    (let ((imenu-anywhere-preprocess-entry-function
+           'imenu-anywhere-preprocess-for-listing))
       (imenu-anywhere-candidates))))
 
 ;;;###autoload
 (defun helm-imenu-anywhere ()
-  "`helm' source for `imenu-anywhere'.
-Sorting is in increasing order of length of imenu symbols.  The
-pyramidal view allows distinguishing different buffers."
+  "`helm' interface for `imenu-anywhere'.
+Sorting is in increasing length of imenu symbols within each
+buffer.  The pyramidal view allows distinguishing different
+buffers."
   (interactive)
   (unless (require 'helm nil t)
-    (error "[imenu-anywhere]: This command requires the 'helm' package"))
-  (let ((imenu-default-goto-function 'imenu-anywhere--goto-function))
-    ;; (imenu-default-goto-function
-    ;;  (if (fboundp 'semantic-imenu-goto-function)
-    ;;      'semantic-imenu-goto-function
-    ;;    'imenu-default-goto-function)))
+    (error "[imenu-anywhere]: This command requires 'helm' package"))
+  (let ((imenu-default-goto-function 'imenu-anywhere-goto))
     (helm :sources 'helm-source-imenu-anywhere
           :default (thing-at-point 'symbol)
           :buffer "*helm imenu-anywhere*")))
+
 
 (provide 'imenu-anywhere)
 ;; Local Variables:

@@ -4,21 +4,16 @@
 
 # imenu-anywhere
 
-`imenu-anywhere` command pops an IDO interface with all the imenu tags across
-all buffers with the same mode as the current one. In a sense it is similar
-to etag selection, but works only for the open buffers. This is often more
-convenient as you don't have to explicitly build the etags table.
+`imenu-anywhere` provides navigation for imenu tags across all buffers that
+satisfy a filtering criteria. Available criteria are - all buffers with the same
+major mode, same project buffers and user defined list of friendly mode buffers.
 
 ## Installation
 
-Available on all major `package.el` community maintained repos -
+Available from `package.el` community maintained repos -
 [MELPA Stable][] and [MELPA][] repos.
 
-MELPA Stable is recommended as it has the latest stable version.
-MELPA has a development snapshot for users who don't mind breakage but
-don't want to run from a git checkout.
-
-You can install `imenu-anywhere` using the following command:
+Install using the following command:
 
 <kbd>M-x package-install [RET] imenu-anywhere [RET]</kbd>
 
@@ -36,16 +31,29 @@ If the installation doesn't work try refreshing the package list:
 
 ## Usage
 
-Add the following to your Emacs config to enable
-`imenu-anywhere`:
+Simply bind `imenu-anywhere` to a key of your choice:
 
-```lisp
-(global-set-key (kbd "C-.") #'imenu-anywhere)
+```el
+ (global-set-key (kbd "C-.") #'imenu-anywhere)
 ```
 
-There is also `helm-imenu-anywhere` which is like imenu-anywhere but uses
-[Helm](https://github.com/emacs-helm) interface instead of IDO. The Helm library
-is not loaded by imenu-anywhere and you have to install it separately.
+By default `imenu-anywhere` uses `completing-read` for completion. If you are
+using `ido-ubiquitous` or `helm-mode` which redefine `completing-read-function`
+your are done. Otherwise you can use any of the available wrappers:
+
+  - `ido-imenu-anywhere`,
+  - `ivy-imenu-anywhere` or
+  - `helm-imenu-anywhere`
+
+For the last two you will need to install `ivy` or `helm` separately.
+
+## Configuration
+
+By default `imenu-anywhere` makes tags available from buffers with the same
+mode, same project and friendly buffers defined by modes in
+`imenu-anywhere-friendly-modes`. You can configure filtering strategies with
+`imenu-anywhere-buffer-filter-functions`.
+
 
 ## License
 
@@ -60,5 +68,5 @@ Distributed under the GNU General Public License; type <kbd>C-h C-c</kbd> to vie
 [melpa-stable-package]: http://stable.melpa.org/#/imenu-anywhere
 [COPYING]: http://www.gnu.org/copyleft/gpl.html
 [contributors]: https://github.com/vspinu/imenu-anywhere/contributors
-[melpa]: http://melpa.org
-[melpa stable]: http://stable.melpa.org
+[MELPA]: http://melpa.org
+[MELPA stable]: http://stable.melpa.org
