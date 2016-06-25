@@ -39,20 +39,19 @@ Simply bind `imenu-anywhere` to a key of your choice:
 
 By default `imenu-anywhere` uses `completing-read` for completion. If you are
 using `ido-ubiquitous` or `helm-mode` which redefine `completing-read-function`
-your are done. Otherwise you can use any of the available wrappers:
+you are set. Otherwise you can use any of the provided wrappers directly:
 
   - `ido-imenu-anywhere`,
   - `ivy-imenu-anywhere` or
   - `helm-imenu-anywhere`
 
-For the last two you will need to install `ivy` or `helm` separately.
+For the last two wrappers you will need to install `ivy` or `helm` separately.
 
 ## Configuration
 
 By default `imenu-anywhere` makes tags available from buffers with the same
-mode, same project and friendly buffers defined by modes in
-`imenu-anywhere-friendly-modes`. You can configure filtering strategies with
-`imenu-anywhere-buffer-filter-functions`.
+mode, same project and friendly modes defined by `imenu-anywhere-friendly-modes`. 
+You can configure the filtering strategies with `imenu-anywhere-buffer-filter-functions`.
 
 
 ## License
