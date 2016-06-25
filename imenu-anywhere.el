@@ -69,16 +69,14 @@ buffer with mode A and vice versa."
   '(imenu-anywhere-same-mode-p
     imenu-anywhere-friendly-mode-p
     imenu-anywhere-same-project-p)
-  "List of functions returning non-nil when buffer is suitable imenu candidate.
-Each function must accept two arguments CURRENT-BUFFER and
-BUFFER. If function returns non-nil, imenu items from BUFFER are
-accessible from CURRENT-BUFFER. See also
-`imenu-anywhere-buffer-list-function'.
-
-Filters defined in this package are:
- `imenu-anywhere-same-mode-p',
- `imenu-anywhere-friendly-mode-p' and
- `imenu-anywhere-same-project-p'."
+  "Functions returning non-nil if buffer's imenu tags are accessible.
+Each function takes two arguments CURRENT-BUFFER and
+OTHER-BUFFER. If any of the functions returns non-nil, imenu
+items from OTHER-BUFFER are accessible from the
+CURRENT-BUFFER. Filters defined in this package are:
+`imenu-anywhere-same-mode-p', `imenu-anywhere-friendly-mode-p'
+and `imenu-anywhere-same-project-p'. See also
+`imenu-anywhere-buffer-list-function' for extra flexibility."
   :group 'imenu-anywhere
   :type '(repeat symbol))
 
@@ -106,7 +104,6 @@ Currently only projectile projects are supported."
         (setq-local imenu-anywhere--project-buffers
                     (funcall 'projectile-project-buffers)))))
   (member other imenu-anywhere--project-buffers))
-
 
 (defvar imenu-anywhere-delimiter "/")
 
@@ -236,28 +233,29 @@ IVY backends use this pre-processing strategy."
       (widen))
     (goto-char position)))
 
-(defun imenu-anywhere--read (index-alist)
-  "Read a choice from an INDEX-ALIST of imenu items via
-`completing-read'."
-  (let* ((str-at-pt (thing-at-point 'symbol))
-         (default (and str-at-pt
-                       (imenu-anywhere--guess-default index-alist str-at-pt)))
-         (names (mapcar 'car index-alist))
-         (name (completing-read "Imenu: " names nil t nil nil default)))
-    (assoc name index-alist)))
-
 ;;;###autoload
 (defun imenu-anywhere ()
   "Go to imenu tag defined in all reachable buffers.
 Reachable buffers are determined by applying functions in
 `imenu-anywhere-buffer-filter-functions' to all buffers returned
-by `imenu-anywhere-buffer-list-function'."
+by `imenu-anywhere-buffer-list-function'.
+
+Sorting is done within each buffer and takes into account items'
+length. Thus more recent buffers in `buffer-list' and shorter
+entries have higher priority."
   (interactive)
   (let ((imenu-default-goto-function 'imenu-anywhere-goto)
         (index-alist (imenu-anywhere-candidates)))
     (if (null index-alist)
         (message "No imenu tags")
-      (imenu (imenu-anywhere--read index-alist)))))
+      (let ((selection
+             (let* ((str-at-pt (thing-at-point 'symbol))
+                    (default (and str-at-pt
+                                  (imenu-anywhere--guess-default index-alist str-at-pt)))
+                    (names (mapcar 'car index-alist))
+                    (name (completing-read "Imenu: " names nil t nil nil default)))
+               (assoc name index-alist))))
+        (imenu selection)))))
 
 
 ;;; IDO
