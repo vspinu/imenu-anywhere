@@ -53,7 +53,7 @@
   :group 'convenience)
 
 (defcustom imenu-anywhere-friendly-modes
-  '((clojure-mode cider-repl-mode)
+  '((clojure-mode clojurescript-mode cider-repl-mode)
     (emacs-lisp-mode inferior-emacs-lisp-mode lisp-interaction-mode)
     (ess-mode inferior-ess-mode)
     (python-mode inferior-python-mode))
