@@ -122,6 +122,7 @@ function is called before filters in
 (defvar imenu-anywhere--project-buffers nil)
 (defvar-local imenu-anywhere--cached-candidates nil)
 (defvar-local imenu-anywhere--cached-tick nil)
+(defvar-local imenu-anywhere--cached-prep-function nil)
 
 (defun imenu-anywhere--reachable-buffer-p (buffer)
   (cl-some (lambda (fun)
@@ -133,20 +134,26 @@ function is called before filters in
 Reachable buffers are determined by applying functions in
 `imenu-anywhere-buffer-filter-functions' to all buffers returned
 by `imenu-anywhere-buffer-list-function'."
-  (setq imenu-anywhere--project-buffers nil)
-  (apply 'append
-         (mapcar (lambda (buff)
-                   (when (imenu-anywhere--reachable-buffer-p buff)
+  (setq-local imenu-anywhere--project-buffers nil)
+  (let ((buffers (loop for b in (funcall imenu-anywhere-buffer-list-function)
+                       if (imenu-anywhere--reachable-buffer-p b)
+                       collect b)))
+    (apply 'append
+           (mapcar (lambda (buff)
                      (with-current-buffer buff
                        (let ((tick (buffer-modified-tick buff)))
-                         (if (eq imenu-anywhere--cached-tick tick)
+                         (if (and (eq imenu-anywhere--cached-tick tick)
+                                  (eq imenu-anywhere--cached-prep-function
+                                      imenu-anywhere-preprocess-entry-function))
                              ;; return cached
                              imenu-anywhere--cached-candidates
                            ;; else update the indexes if in imenu buffer
                            (setq imenu-anywhere--cached-tick tick)
+                           (setq imenu-anywhere--cached-prep-function
+                                 imenu-anywhere-preprocess-entry-function)
                            (setq imenu-anywhere--cached-candidates
-                                 (imenu-anywhere-buffer-candidates)))))))
-                 (funcall imenu-anywhere-buffer-list-function))))
+                                 (imenu-anywhere-buffer-candidates))))))
+                   buffers))))
 
 (defun imenu-anywhere-buffer-candidates ()
   "Return an alist of candidates in the current buffer."
