@@ -163,55 +163,63 @@ by `imenu-anywhere-buffer-list-function'."
                  imenu-extract-index-name-function)
             (not (eq imenu-create-index-function 'imenu-default-create-index-function)))
     (setq imenu--index-alist nil)
-    (cl-delete-if '(lambda (el) (or (null (car el))
-                                    (equal (car el) "*Rescan*")))
+    (cl-delete-if (lambda (el) (null (car el)))
                   (sort (cl-mapcan 'imenu-anywhere--candidates-from-entry
                                    (imenu--make-index-alist t))
                         (lambda (a b) (< (length (car a)) (length (car b))))))))
 
 
-(defun imenu-anywhere--candidates-from-entry (entry)
+(defun imenu-anywhere--candidates-from-entry (entry &optional inner-p)
   "Create candidates from imenu ENTRY.
 Return a list of entries when entry is a `imenu--subalist-p' or a
 list of one entry otherwise."
-  (let ((ecdr (cdr entry)))
+  (let ((ecdr (cdr entry))
+        (prep-fun imenu-anywhere-preprocess-entry-function))
     (cond ((imenu--subalist-p entry)
            (mapcar (lambda (sub-entry)
-                     (funcall imenu-anywhere-preprocess-entry-function
-                              sub-entry (car entry)))
-                   (cl-mapcan 'imenu-anywhere--candidates-from-entry (cdr entry))))
+                     (funcall prep-fun sub-entry (car entry)))
+                   (cl-mapcan (lambda (el) (imenu-anywhere--candidates-from-entry el t))
+                              (cdr entry))))
           ((integerp ecdr)
-           (list (cons (car entry) (copy-marker ecdr))))
+           (when (> ecdr 0) ;; drop (*Rescan* . -99)
+             (let ((entry (cons (car entry) (copy-marker ecdr))))
+               (list (if inner-p entry (funcall prep-fun entry nil))))))
           ((and (listp ecdr) (eq (car ecdr) 'IGNORE)) nil)
-          (t (list entry)))))
+          (t (list (if inner-p entry (funcall prep-fun entry nil)))))))
 
-(defun imenu-anywhere-preprocess-for-completion (entry entry-name)
+(defun imenu-anywhere-preprocess-for-completion (entry parent-name)
   "Default function for `imenu-anywhere-preprocess-entry-function'.
-Concatenate imenu ENTRY and ENTRY-NAME in a meaningful way. This
+Concatenate imenu ENTRY and PARENT-NAME in a meaningful way. This
 pre-processing is suitable for minibuffer completion mechanisms
 such as `completing-read' or `ido-completing-read'."
-  (let* ((entry-name (replace-regexp-in-string "\\c-*$" "" (car entry)))
-         ;; in python hierarchical entry is defined as ("foo"
-         ;; (*function-definition* ...) (sub-name ..)) where "foo" is the
-         ;; ENTRY-NAME from above and *function-definition* is PREFIX. In this
-         ;; case we need to reverse the position. We detect such entries by
-         ;; assuming that they are enclosed in *..* and hope for the best.
-         (reverse (string-match-p "^\\*.*\\*$" entry-name)))
-    (setcar entry (if reverse
-                      (concat entry-name
-                              imenu-anywhere-delimiter
-                              entry-name)
-                    (concat entry-name
-                            imenu-anywhere-delimiter
-                            entry-name)))
-    entry))
+  (when entry
+    (let* ((entry-name (replace-regexp-in-string "\\c-*$" "" (car entry)))
+           ;; in python hierarchical entry is defined as ("foo"
+           ;; (*function-definition* ...) (sub-name ..)) where "foo" is the
+           ;; ENTRY-NAME from above and *function-definition* is PREFIX. In this
+           ;; case we need to reverse the position. We detect such entries by
+           ;; assuming that they are enclosed in *..* and hope for the best.
+           (reverse (string-match-p "^\\*.*\\*$" entry-name))
+           (sep (and parent-name imenu-anywhere-delimiter)))
+      (setcar entry (if reverse
+                        (concat parent-name sep entry-name)
+                      (concat entry-name sep parent-name)))
+      entry)))
 
 (defun imenu-anywhere-preprocess-for-listing (entry entry-name)
   "Pre-processor of imenu ENTRY suitable for hierarchical listings.
 ENTRY-NAME is commonly a class or type of the object. Helm and
 IVY backends use this pre-processing strategy."
-  (setcar entry (concat entry-name imenu-anywhere-delimiter (car entry)))
-  entry)
+  (when entry
+    (let ((bname (if (markerp (cdr entry))
+                     (concat (buffer-name (marker-buffer (cdr entry))) ": ")
+                   "")))
+      (setcar entry (concat bname
+                            entry-name
+                            (and entry-name
+                                 imenu-anywhere-delimiter)
+                            (car entry))))
+    entry))
 
 (defun imenu-anywhere--guess-default (index-alist str-at-pt)
   "Guess a default choice from the given imenu list and string at point."
@@ -276,7 +284,8 @@ This is a simple wrapper around `imenu-anywhere' which uses
 instead, but there should be little or no difference."
   (interactive)
   (require 'ido)
-  (let ((completing-read-function 'ido-completing-read))
+  (let ((imenu-anywhere-preprocess-entry-function #'imenu-anywhere-preprocess-for-completion)
+        (completing-read-function 'ido-completing-read))
     (imenu-anywhere)))
 
 
