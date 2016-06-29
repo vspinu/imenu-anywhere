@@ -79,6 +79,24 @@ and `imenu-anywhere-same-project-p'. See also
   :group 'imenu-anywhere
   :type '(repeat symbol))
 
+(defvar imenu-anywhere-preprocess-entry-function 'imenu-anywhere-preprocess-for-completion
+  "Holds a function to process each entry.
+Function must accept two arguments - entry and entry name. See
+the code for `imenu-anywhere-preprocess-for-completion' and
+`imenu-anywhere-preprocess-for-listing' for examples.")
+
+(defvar-local imenu-anywhere-buffer-list-function 'buffer-list
+  "Function that returns the list of buffers for `imenu-anywhere' to consider.
+Any buffers that are not on this list will be ignored. This
+function is called before filters in
+`imenu-anywhere-buffer-filter-functions'.")
+
+(defvar imenu-anywhere-delimiter "/")
+(defvar imenu-anywhere--project-buffers nil)
+(defvar-local imenu-anywhere--cached-candidates nil)
+(defvar-local imenu-anywhere--cached-tick nil)
+(defvar-local imenu-anywhere--cached-prep-function nil)
+
 (defun imenu-anywhere-same-mode-p (current other)
   "Return non-nil if buffers CURRENT and OTHER have same mode."
   (eq (buffer-local-value 'major-mode current)
@@ -104,25 +122,6 @@ Currently only projectile projects are supported."
                     (funcall 'projectile-project-buffers)))))
   (member other imenu-anywhere--project-buffers))
 
-(defvar imenu-anywhere-delimiter "/")
-
-(defvar imenu-anywhere-preprocess-entry-function 'imenu-anywhere-preprocess-for-completion
-  "Holds a function to process each entry.
-Function must accept two arguments - entry and entry name. See
-the code for `imenu-anywhere-preprocess-for-completion' and
-`imenu-anywhere-preprocess-for-listing' for examples.")
-
-(defvar-local imenu-anywhere-buffer-list-function 'buffer-list
-  "Function that returns the list of buffers for `imenu-anywhere' to consider.
-Any buffers that are not on this list will be ignored. This
-function is called before filters in
-`imenu-anywhere-buffer-filter-functions'.")
-
-(defvar imenu-anywhere--project-buffers nil)
-(defvar-local imenu-anywhere--cached-candidates nil)
-(defvar-local imenu-anywhere--cached-tick nil)
-(defvar-local imenu-anywhere--cached-prep-function nil)
-
 (defun imenu-anywhere--reachable-buffer-p (buffer)
   (cl-some (lambda (fun)
              (funcall fun (current-buffer) buffer))
@@ -134,7 +133,7 @@ Reachable buffers are determined by applying functions in
 `imenu-anywhere-buffer-filter-functions' to all buffers returned
 by `imenu-anywhere-buffer-list-function'."
   (setq-local imenu-anywhere--project-buffers nil)
-  (let ((buffers (loop for b in (funcall imenu-anywhere-buffer-list-function)
+  (let ((buffers (cl-loop for b in (funcall imenu-anywhere-buffer-list-function)
                        if (imenu-anywhere--reachable-buffer-p b)
                        collect b)))
     (apply 'append
@@ -306,20 +305,22 @@ This is a simple wrapper around `imenu-anywhere' which uses
 
 ;;; HELM
 
+;; silence byte-compiler
 (defvar helm-sources-using-default-as-input)
-(autoload 'helm "helm")
-(autoload 'helm-highlight-current-line "helm-utils")
-(autoload 'helm-build-sync-source "helm-source" nil nil 'macro)
-(autoload 'with-helm-current-buffer "helm-lib" nil nil 'macro)
+(defvar helm-imenu-fuzzy-match)
+(defvar helm-current-buffer)
+(declare-function helm "helm")
+(declare-function helm-highlight-current-line "helm-utils")
+(declare-function helm-make-source "helm-source")
 
 (eval-after-load "helm"
   '(progn
      (require 'helm-imenu)
      (defvar helm-source-imenu-anywhere
-       (helm-build-sync-source "imenu-anywere"
+       (helm-make-source "imenu-anywere" 'helm-source-sync
          :candidates #'helm-imenu-anywhere-candidates
          :persistent-action (lambda (elm)
-                              (imenu-anywhere--goto-function "" elm)
+                              (imenu-anywhere-goto "" elm)
                               (unless (fboundp 'semantic-imenu-tag-overlay)
                                 (helm-highlight-current-line)))
          :fuzzy-match helm-imenu-fuzzy-match
@@ -329,7 +330,9 @@ This is a simple wrapper around `imenu-anywhere' which uses
      (add-to-list 'helm-sources-using-default-as-input 'helm-source-imenu-anywhere)))
 
 (defun helm-imenu-anywhere-candidates ()
-  (with-helm-current-buffer
+  ;; don't use macro with-helm-current-buffer
+  (with-current-buffer (or (and (buffer-live-p helm-current-buffer) helm-current-buffer)
+                           (setq helm-current-buffer (current-buffer)))
     (let ((imenu-anywhere-preprocess-entry-function
            'imenu-anywhere-preprocess-for-listing))
       (imenu-anywhere-candidates))))
