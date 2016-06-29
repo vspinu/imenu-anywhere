@@ -43,8 +43,7 @@
 ;;; Code:
 
 (require 'imenu)
-(eval-when-compile
-  (require 'cl-extra))
+(require 'cl-lib)
 
 ;;; Customization
 (defgroup imenu-anywhere nil
