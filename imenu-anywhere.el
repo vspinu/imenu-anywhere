@@ -119,7 +119,8 @@ Currently only projectile projects are supported."
     (when (fboundp 'projectile-project-buffers)
       (let (projectile-require-project-root)
         (setq-local imenu-anywhere--project-buffers
-                    (funcall 'projectile-project-buffers)))))
+                    (or (funcall 'projectile-project-buffers)
+                        (list nil))))))
   (member other imenu-anywhere--project-buffers))
 
 (defun imenu-anywhere--reachable-buffer-p (buffer)
