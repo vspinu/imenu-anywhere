@@ -161,12 +161,19 @@ by `imenu-anywhere-buffer-list-function'."
             (and imenu-prev-index-position-function
                  imenu-extract-index-name-function)
             (not (eq imenu-create-index-function 'imenu-default-create-index-function)))
-    (setq imenu--index-alist nil)
-    (cl-delete-if (lambda (el) (null (car el)))
-                  (sort (cl-mapcan 'imenu-anywhere--candidates-from-entry
-                                   (imenu--make-index-alist t))
-                        (lambda (a b) (< (length (car a)) (length (car b))))))))
-
+    (let* ((old-index imenu--index-alist)
+           (index (condition-case err
+                      (progn
+                        (setq imenu--index-alist nil)
+                        (imenu--make-index-alist t))
+                    (error
+                     (message "Imenu error in %s. Keeping old index. (%s)" (current-buffer) (error-message-string err))
+                     (setq imenu--index-alist old-index)))))
+      (when index
+        (cl-delete-if (lambda (el) (null (car el)))
+                      (sort (cl-mapcan 'imenu-anywhere--candidates-from-entry
+                                       index)
+                            (lambda (a b) (< (length (car a)) (length (car b))))))))))
 
 (defun imenu-anywhere--candidates-from-entry (entry &optional inner-p)
   "Create candidates from imenu ENTRY.
