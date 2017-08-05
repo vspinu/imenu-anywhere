@@ -2,7 +2,7 @@
 ;;
 ;; Copyright (C) 2011-2016 Vitalie Spinu
 ;; Author: Vitalie Spinu  <spinuvit.list[ aaattt ]gmail[ dot ]com>
-;; Version: DEV
+;; Version: 1.1.4
 ;; Keywords: ido, imenu, tags
 ;; URL: https://github.com/vitoshka/imenu-anywhere
 ;; Package-Requires: ((cl-lib "0.5"))
@@ -38,7 +38,7 @@
 ;;
 ;; Several filtering strategies are available - same-mode buffers, same-project
 ;; buffers and user defined friendly buffers. See
-;; `imenu-anywhere-buffer-filter-functions'.
+;; `imenu-anywhere-buffer-filter-functions' and `imenu-anywhere-friendly-modes'.
 ;;
 ;;; Code:
 
@@ -52,7 +52,7 @@
   :group 'convenience)
 
 (defcustom imenu-anywhere-friendly-modes
-  '((clojure-mode clojurescript-mode cider-repl-mode)
+  '((clojure-mode clojurex-mode clojurec-mode clojurescript-mode cider-repl-mode cider-clojure-interaction-mode)
     (emacs-lisp-mode inferior-emacs-lisp-mode lisp-interaction-mode)
     (ess-mode inferior-ess-mode)
     (python-mode inferior-python-mode))
