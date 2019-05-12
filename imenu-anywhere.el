@@ -2,10 +2,10 @@
 ;;
 ;; Copyright (C) 2011-2016 Vitalie Spinu
 ;; Author: Vitalie Spinu  <spinuvit.list[ aaattt ]gmail[ dot ]com>
-;; Version: 1.1.4
+;; Version: 1.1.5
 ;; Keywords: ido, imenu, tags
 ;; URL: https://github.com/vitoshka/imenu-anywhere
-;; Package-Requires: ((cl-lib "0.5"))
+;; Package-Requires: ((cl-lib "0.5") (emacs "25"))
 ;;
 ;; This file is NOT part of GNU Emacs.
 ;;
@@ -119,7 +119,8 @@ Currently only projectile projects are supported."
     (when (fboundp 'projectile-project-buffers)
       (let (projectile-require-project-root)
         (setq-local imenu-anywhere--project-buffers
-                    (or (funcall 'projectile-project-buffers)
+                    (or (with-demoted-errors "Imenu projectile error: %s"
+                          (funcall 'projectile-project-buffers))
                         (list nil))))))
   (member other imenu-anywhere--project-buffers))
 
