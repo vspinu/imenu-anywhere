@@ -270,9 +270,10 @@ entries have higher priority."
         (message "No imenu tags")
       (let ((selection
              (let* ((str-at-pt (thing-at-point 'symbol))
-                    (default (and str-at-pt
-                                  (imenu-anywhere--guess-default index-alist str-at-pt)))
                     (names (mapcar 'car index-alist))
+                    (default (or (and str-at-pt
+                                      (imenu-anywhere--guess-default index-alist str-at-pt))
+                                 (car names)))
                     (name (completing-read "Imenu: " names nil t nil nil default)))
                (assoc name index-alist))))
         (imenu selection)))))
