@@ -2,7 +2,7 @@
 ;;
 ;; Copyright (C) 2011-2016 Vitalie Spinu
 ;; Author: Vitalie Spinu  <spinuvit.list[ aaattt ]gmail[ dot ]com>
-;; Version: 1.1.5
+;; Version: 1.1.6
 ;; Keywords: ido, imenu, tags
 ;; URL: https://github.com/vitoshka/imenu-anywhere
 ;; Package-Requires: ((cl-lib "0.5") (emacs "25"))
@@ -260,6 +260,9 @@ Reachable buffers are determined by applying functions in
 `imenu-anywhere-buffer-filter-functions' to all buffers returned
 by `imenu-anywhere-buffer-list-function'.
 
+Add current point to the `xref' marker stack, which you can pop
+later with `xref-pop-marker-stack'.
+
 Sorting is done within each buffer and takes into account items'
 length. Thus more recent buffers in `buffer-list' and shorter
 entries have higher priority."
@@ -276,6 +279,8 @@ entries have higher priority."
                                  (car names)))
                     (name (completing-read "Imenu: " names nil t nil nil default)))
                (assoc name index-alist))))
+        (when (fboundp 'xref-push-marker-stack)
+          (funcall #'xref-push-marker-stack))
         (imenu selection)))))
 
 
